@@ -104,8 +104,8 @@ class OctaveStream;
 class MapleStream;
 class MaximaStream;
 class MathematicaStream;
-class MathStream;
-class WriteStream;
+class MathMLStream;
+class TeXMathStream;
 
 class MathData;
 class InsetMathMacroTemplate;
@@ -209,14 +209,14 @@ public:
 
 	/// Whether the inset allows \(no)limits
 	bool allowsLimitsChange() const { return mathClass() == MC_OP; }
-	/// The default limits value
-	virtual Limits defaultLimits() const { return NO_LIMITS; }
+	/// The default limits value depending on whether display mode is on
+	virtual Limits defaultLimits(bool /* display */) const { return NO_LIMITS; }
 	/// whether the inset has limit-like sub/superscript
 	virtual Limits limits() const { return AUTO_LIMITS; }
 	/// sets types of sub/superscripts
 	virtual void limits(Limits) {}
 	/// write limits status for LaTeX and LyX code
-	void writeLimits(WriteStream & os) const;
+	void writeLimits(TeXMathStream & os) const;
 
 	/// replace things by other things
 	virtual void replace(ReplaceData &) {}
@@ -231,7 +231,7 @@ public:
 	// write(). This is to shut off a clang warning.
 	using Inset::write;
 	/// write LaTeX and LyX code
-	virtual void write(WriteStream & os) const;
+	virtual void write(TeXMathStream & os) const;
 	/// write normalized content
 	virtual void normalize(NormalStream &) const;
 	/// write content as something readable by Maple
@@ -241,7 +241,7 @@ public:
 	/// write content as something readable by Mathematica
 	virtual void mathematica(MathematicaStream &) const;
 	/// write content as MathML
-	virtual void mathmlize(MathStream &) const;
+	virtual void mathmlize(MathMLStream &) const;
 	/// write content as HTML, best we can.
 	/// the idea for this, and some of the details, come from
 	/// eLyXer, written by Alex Fernandez. no code is borrowed. rather,

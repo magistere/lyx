@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 600
+\lyxformat 601
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -8751,14 +8751,12 @@ Verbatim
 \end_layout
 
 \begin_layout Verbatim
-
 This is Verbatim.
 \end_layout
 
 \begin_layout Verbatim
 \noindent
 \align block
-
 The following 2 lines are empty:
 \end_layout
 
@@ -8771,7 +8769,6 @@ The following 2 lines are empty:
 \end_layout
 
 \begin_layout Verbatim
-
 Almost everything is allowed in Verbatim:"%&$§#~'`
 \backslash
 }][{|
@@ -8795,7 +8792,6 @@ Verbatim
 \end_layout
 
 \begin_layout Verbatim*
-
 This is Verbatim*.
 \end_layout
 
@@ -13510,7 +13506,7 @@ automatic
 \change_unchanged
  
 \change_inserted -712698321 1524413747
-either the the standard \SpecialChar TeX
+either the standard \SpecialChar TeX
  font 
 \begin_inset Quotes eld
 \end_inset
@@ -34038,7 +34034,26 @@ If the characters |
 
 should appear in nomenclature entries containing \SpecialChar TeX
  code they need to be escaped
- by adding a quote character in front of them.
+ by adding a 
+\change_deleted -712698321 1610611122
+quote
+\change_inserted -712698321 1610611123
+percent
+\change_unchanged
+ character in front of them.
+\change_inserted -712698321 1610611807
+
+\begin_inset CommandInset nomenclature
+LatexCommand nomenclature
+symbol "%@, %|, %!, %\""
+description "The quote sign in TeX code is output by writing ' %\"{}%\"{} '."
+literal "true"
+
+\end_inset
+
+
+\change_deleted -712698321 1610611114
+
 \begin_inset CommandInset nomenclature
 LatexCommand nomenclature
 symbol "\"@, \"|, \"!, \"\""
@@ -34047,6 +34062,8 @@ literal "true"
 
 \end_inset
 
+
+\change_unchanged
 
 \end_layout
 
@@ -41119,13 +41136,41 @@ Command
 
 Buffer
 \family default
- can be turned on and off.
+ can be turned 
+\emph on
+on
+\emph default
+ and 
+\emph on
+off
+\emph default
+.
  The 
 \emph on
 on
 \emph default
  state is denoted in the menu with a checkmark.
- The 
+
+\change_deleted -712698321 1608195495
+ 
+\change_inserted -712698321 1608195492
+
+\end_layout
+
+\begin_layout Standard
+The
+\change_inserted -712698321 1608195407
+ 
+\family sans
+Phonetic
+\begin_inset space ~
+\end_inset
+
+Symbols
+\family default
+,
+\change_unchanged
+ 
 \family sans
 Table
 \family default
@@ -41156,12 +41201,34 @@ Panels
  toolbars can additionally be set to the state 
 \emph on
 automatic
+\change_deleted -712698321 1608195728
+
 \emph default
-, denoted in the menu with the suffix 
+, 
+\change_inserted -712698321 1608196033
+.
+ The state of these toolbars is set and indicated in a submenu which lets
+ you select 
+\family sans
+On
+\family default
+, 
+\family sans
+Off
+\family default
+, and 
+\family sans
+Automatic
+\family default
+.
+\change_deleted -712698321 1608195563
+denoted in the menu with the suffix 
 \family sans
 (auto)
 \family default
 .
+\change_unchanged
+
 \end_layout
 
 \begin_layout Standard
@@ -41169,7 +41236,15 @@ In the
 \emph on
 on
 \emph default
- state the toolbar is permanently shown; in the 
+ state the toolbar is permanently shown
+\change_inserted -712698321 1608195803
+, in the 
+\emph on
+off
+\emph default
+ state it is never shown
+\change_unchanged
+; in the 
 \emph on
 automatic
 \emph default
@@ -41177,7 +41252,11 @@ automatic
  or when a certain feature is enabled.
  That means that the review toolbar will only be shown if change tracking
  is activated, the math and table toolbars are only shown if the cursor
- is inside a formula or table respectively.
+ is inside a formula or table respectively
+\change_inserted -712698321 1608195857
+, the phonetic symbols toolbar only in the phonetic symbols environment
+\change_unchanged
+.
 \end_layout
 
 \begin_layout Standard
@@ -48169,8 +48248,8 @@ reference "subsec:Numbering-depth"
 \change_inserted 5863208 1558620379
 You can typeset lines numbering in the output file by enabling the checkbox
  at the bottom.
- The functionality is handled by package lineno and and additional options
- of this package can be used as well.
+ The functionality is handled by package lineno and additional options of
+ this package can be used as well.
  The most common one are:
 \end_layout
 
@@ -50174,7 +50253,7 @@ do not
 \emph default
  track changes.
  In such documents, change-tracked text will be copied and pasted as is
- is (keeping 
+ (keeping 
 \emph on
 addition
 \emph default

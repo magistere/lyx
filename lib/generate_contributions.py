@@ -492,6 +492,14 @@ contributors = [
                  "3 January 2009",
                  u"CMake build system, Slovak translation, Advanced search with format"),
 
+     contributor(u"Lorenzo Bertini",
+                 "lorenzobertini97 () gmail ! com",
+                 "GPL",
+                 "Contributions licensing",
+                 "m=160829081615487",
+                 "18 December 2020",
+                 u"Bug fixes"),
+
      contributor(u"Jacob Bishop",
                  "bishop.jacob () gmail ! com",
                  "GPL",
@@ -602,7 +610,7 @@ contributors = [
                  "[no subject]",
                  "m=159048578028108",
                  "26 May 2020",
-                 u"Russian Translation of the User Guide"),
+                 u"Russian Translation of documentation"),
 
      contributor(u"Yuri Chornoivan",
                  "yurchor () ukr ! net",
@@ -1898,7 +1906,7 @@ contributors = [
                  "Re: Updated Russian translation",
                  "m=151306079714476",
                  "12 December 2017",
-                 u"Russian translation of the user interface"),
+                 u"Russian localization and documentation, bug reports and fixes, updating of code"),
      
      contributor(u"Giovanni Sora",
                  "g.sora () tiscali ! it",

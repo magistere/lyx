@@ -14,8 +14,6 @@
 
 #include "GuiApplication.h"
 #include "GuiView.h"
-#include "GuiWorkArea.h"
-#include "qt_helpers.h"
 
 #include "Buffer.h"
 #include "BufferList.h"
@@ -24,11 +22,9 @@
 #include "Cursor.h"
 #include "FuncRequest.h"
 #include "Language.h"
-#include "Lexer.h"
 #include "LyX.h"
 #include "lyxfind.h"
 #include "Text.h"
-#include "TextClass.h"
 
 #include "frontends/alert.h"
 
@@ -592,6 +588,10 @@ FindAndReplace::FindAndReplace(GuiView & parent,
 	widget_ = new FindAndReplaceWidget(parent);
 	setWidget(widget_);
 	setFocusProxy(widget_);
+#ifdef Q_OS_MAC
+	// On Mac show and floating
+	setFloating(true);
+#endif
 
 	connect(this, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)),
 	        widget_, SLOT(dockLocationChanged(Qt::DockWidgetArea)));

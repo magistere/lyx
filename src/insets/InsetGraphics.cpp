@@ -126,8 +126,8 @@ string findTargetFormat(string const & format, OutputParams const & runparams)
 		return "png";
 	}
 
-    // for HTML and DocBook, we leave the known formats and otherwise convert to png
-    if (runparams.flavor == Flavor::Html || runparams.flavor == Flavor::DocBook5) {
+	// for HTML and DocBook, we leave the known formats and otherwise convert to png
+	if (runparams.flavor == Flavor::Html || runparams.flavor == Flavor::DocBook5) {
 		Format const * const f = theFormats().getFormat(format);
 		// Convert vector graphics to svg
 		if (f && f->vectorFormat() && theConverters().isReachable(format, "svg"))
@@ -293,7 +293,7 @@ void InsetGraphics::metrics(MetricsInfo & mi, Dimension & dim) const
 
 void InsetGraphics::draw(PainterInfo & pi, int x, int y) const
 {
-	graphic_->draw(pi, x, y);
+	graphic_->draw(pi, x, y, params_.darkModeSensitive);
 }
 
 

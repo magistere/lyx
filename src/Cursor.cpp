@@ -38,6 +38,7 @@
 #include "support/gettext.h"
 #include "support/lassert.h"
 
+#include "insets/InsetLayout.h"
 #include "insets/InsetTabular.h"
 
 #include "mathed/InsetMath.h"
@@ -1878,7 +1879,7 @@ void Cursor::normalize()
 		       << " in atom: '";
 		odocstringstream os;
 		otexrowstream ots(os);
-		WriteStream wi(ots, false, true, WriteStream::wsDefault);
+		TeXMathStream wi(ots, false, true, TeXMathStream::wsDefault);
 		inset().asInsetMath()->write(wi);
 		lyxerr << to_utf8(os.str()) << endl;
 		pos() = lastpos();
@@ -2470,6 +2471,9 @@ void Cursor::setCurrentFont()
 
 void Cursor::checkBufferStructure()
 {
+	if (buffer()->isInternal())
+		return;
+
 	Buffer const * master = buffer()->masterBuffer();
 	master->tocBackend().updateItem(*this);
 	if (master != buffer() && !master->hasGuiDelegate())

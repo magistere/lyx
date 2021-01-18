@@ -103,7 +103,7 @@ Menuset
 		Separator
 		OptItem "Plural|a" "inset-modify ref toggle-plural"
 		OptItem "Capitalize|C" "inset-modify ref toggle-caps"
-		Item "No Prefix" "inset-modify ref toggle-noprefix"
+		OptItem "No Prefix" "inset-modify ref toggle-noprefix"
 		Separator
 		Item "Settings...|S" "inset-settings"
 	End
@@ -356,6 +356,8 @@ Menuset
 		Item "Copy" "copy"
 		Item "Paste" "paste"
 		Submenu "Paste Recent|e" "edit_pasterecent"
+		Separator
+		OptItem "Split Inset|t" "inset-split"
 		Separator
 		Item "Jump Back to Saved Bookmark|B" "bookmark-goto 0"
 		OptItem "Forward Search|F" "forward-search"

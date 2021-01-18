@@ -30,7 +30,7 @@ public:
 	///
 	void draw(PainterInfo &, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void metrics(MetricsInfo & mi, Dimension & dim) const override;
 	///
@@ -39,8 +39,8 @@ public:
 	void infoize(odocstream & os) const override;
 	///
 	MathClass mathClass() const override;
-	/// The default limits value
-	Limits defaultLimits() const override { return allowsLimitsChange() ? LIMITS : NO_LIMITS; }
+	/// The default limits value in \c display style
+	Limits defaultLimits(bool display) const override;
 	/// whether the inset has limit-like sub/superscript
 	Limits limits() const override { return limits_; }
 	/// sets types of sub/superscripts
@@ -50,7 +50,7 @@ public:
 	///
 	InsetCode lyxCode() const override { return MATH_DECORATION_CODE; }
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 private:

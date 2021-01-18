@@ -1129,10 +1129,20 @@ void Paragraph::Private::latexSpecialChar(otexstream & os,
 {
 	char_type const c = owner_->getUChar(bparams, runparams, i);
 
-	if (style.pass_thru || runparams.pass_thru
+	if (style.pass_thru || runparams.pass_thru || runparams.for_search
 	    || contains(style.pass_thru_chars, c)
 	    || contains(runparams.pass_thru_chars, c)) {
-		if (c != '\0') {
+		if (runparams.for_search) {
+			if (c == '\\')
+				os << "\\\\";
+			else if (c == '{')
+				os << "\\braceleft";
+			else if (c == '}')
+				os << "\\braceright";
+			else if (c != '\0')
+				os.put(c);
+		}
+		else if (c != '\0') {
 			Encoding const * const enc = runparams.encoding;
 			if (enc && !enc->encodable(c))
 				throw EncodingException(c);
@@ -4386,23 +4396,39 @@ int Paragraph::find(docstring const & str, bool cs, bool mw,
 	int i = 0;
 	pos_type const parsize = d->text_.size();
 	for (i = 0; i < strsize && pos < parsize; ++i, ++pos) {
+		// ignore deleted matter
+		if (!del && isDeleted(pos)) {
+			if (pos == parsize - 1)
+				break;
+			pos++;
+			--i;
+			continue;
+		}
 		// Ignore "invisible" letters such as ligature breaks
 		// and hyphenation chars while searching
-		while (pos < parsize - 1 && isInset(pos)) {
+		bool nonmatch = false;
+		while (pos < parsize && isInset(pos)) {
 			Inset const * inset = getInset(pos);
-			if (!inset->isLetter())
+			if (!inset->isLetter() && !inset->isChar())
 				break;
 			odocstringstream os;
 			inset->toString(os);
-			if (!os.str().empty())
-				break;
+			if (!os.str().empty()) {
+				int const insetstringsize = os.str().length();
+				for (int j = 0; j < insetstringsize && pos < parsize; ++i, ++j) {
+					if (str[i] != os.str()[j]) {
+						nonmatch = true;
+						break;
+					}
+				}
+			}
 			pos++;
 		}
+		if (nonmatch || i == strsize)
+			break;
 		if (cs && str[i] != d->text_[pos])
 			break;
 		if (!cs && uppercase(str[i]) != uppercase(d->text_[pos]))
-			break;
-		if (!del && isDeleted(pos))
 			break;
 	}
 

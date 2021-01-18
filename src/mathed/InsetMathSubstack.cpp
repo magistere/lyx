@@ -97,7 +97,7 @@ void InsetMathSubstack::infoize(odocstream & os) const
 }
 
 
-void InsetMathSubstack::write(WriteStream & os) const
+void InsetMathSubstack::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "\\substack{";
@@ -125,7 +125,7 @@ void InsetMathSubstack::maple(MapleStream & os) const
 }
 
 
-void InsetMathSubstack::mathmlize(MathStream & ms) const
+void InsetMathSubstack::mathmlize(MathMLStream & ms) const
 {
 	int movers = 0;
 	row_type const numrows = nrows();

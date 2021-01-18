@@ -40,7 +40,7 @@ public:
 	/// restart the timer
 	void restart();
 	/// signal emitted on timer expiry
-	signals2::signal<void()> timeout;
+	signal<void()> timeout;
 	/// emit the signal
 	void emit();
 	/// set the timer type
@@ -54,8 +54,6 @@ private:
 	void operator=(Timeout const &);
 	///
 	class Impl;
-	///
-	friend class Impl;
 	///
 	Impl * const pimpl_;
 	/// one-shot or repeating

@@ -105,18 +105,18 @@ bool VCS::makeRCSRevision(string const &version, string &revis) const
 }
 
 
-bool VCS::checkparentdirs(FileName const & file, std::string const & vcsdir)
+FileName VCS::checkParentDirs(FileName const & start, std::string const & file)
 {
-	FileName dirname = file.onlyPath();
+	FileName dirname = start.onlyPath();
 	do {
-		FileName tocheck = FileName(addName(dirname.absFileName(), vcsdir));
+		FileName tocheck = FileName(addPathName(dirname.absFileName(), file));
 		LYXERR(Debug::LYXVC, "check file: " << tocheck.absFileName());
 		if (tocheck.exists())
-			return true;
-		//this construct because of #8295
+			return tocheck;
+		// this construct because of #8295
 		dirname = FileName(dirname.absFileName()).parentPath();
 	} while (!dirname.empty());
-	return false;
+	return FileName();
 }
 
 
@@ -161,8 +161,8 @@ bool RCS::retrieve(FileName const & file)
 {
 	LYXERR(Debug::LYXVC, "LyXVC::RCS: retrieve.\n\t" << file);
 	// The caller ensures that file does not exist, so no need to check that.
-	return doVCCommandCall("co -q -r " + quoteName(file.toFilesystemEncoding()),
-	                       FileName()) == 0;
+	int const ret = doVCCommandCall("co -q -r " + quoteName(file.toFilesystemEncoding()));
+	return ret == 0;
 }
 
 
@@ -201,7 +201,7 @@ void RCS::scanMaster()
 			// get locker here
 			if (contains(token, ';')) {
 				locker_ = "Unlocked";
-				vcstatus = UNLOCKED;
+				vcstatus_ = UNLOCKED;
 				continue;
 			}
 			string tmpt;
@@ -215,7 +215,7 @@ void RCS::scanMaster()
 				// s2 is user, and s1 is version
 				if (s1 == version_) {
 					locker_ = s2;
-					vcstatus = LOCKED;
+					vcstatus_ = LOCKED;
 					break;
 				}
 			} while (!contains(tmpt, ';'));
@@ -536,23 +536,19 @@ CVS::CVS(FileName const & m, Buffer * b) : VCS(b)
 
 FileName const CVS::findFile(FileName const & file)
 {
-	// First we look for the CVS/Entries in the same dir
-	// where we have file.
+	LYXERR(Debug::LYXVC, "LyXVC: Checking if "
+		   << onlyFileName(file.absFileName()) << "is under cvs");
+	// First we look for the CVS/Entries in the same dir where we have file.
+	// Note that it is not necessary to search parent directories, since
+	// there will be a CVS/Entries file in every subdirectory.
 	FileName const entries(onlyPath(file.absFileName()) + "/CVS/Entries");
-	string const tmpf = '/' + onlyFileName(file.absFileName()) + '/';
-	LYXERR(Debug::LYXVC, "LyXVC: Checking if file is under cvs in `" << entries
-			     << "' for `" << tmpf << '\'');
 	if (entries.isReadableFile()) {
-		// Ok we are at least in a CVS dir. Parse the CVS/Entries
-		// and see if we can find this file. We do a fast and
-		// dirty parse here.
-		ifstream ifs(entries.toFilesystemEncoding().c_str());
-		string line;
-		while (getline(ifs, line)) {
-			LYXERR(Debug::LYXVC, "\tEntries: " << line);
-			if (contains(line, tmpf))
-				return entries;
-		}
+		// We are in a CVS-managed directory
+		// See if the file is known to CVS
+		string const cmd = "cvs log " + quoteName(file.toFilesystemEncoding());
+		int const ret = doVCCommandCall(cmd, file.onlyPath());
+		if (ret == 0)
+			return entries;
 	}
 	return FileName();
 }
@@ -563,8 +559,8 @@ void CVS::scanMaster()
 	LYXERR(Debug::LYXVC, "LyXVC::CVS: scanMaster. \n     Checking: " << master_);
 	// Ok now we do the real scan...
 	ifstream ifs(master_.toFilesystemEncoding().c_str());
-	string name = onlyFileName(owner_->absFileName());
-	string tmpf = '/' + name + '/';
+	string const name = onlyFileName(owner_->absFileName());
+	string const tmpf = '/' + name + '/';
 	LYXERR(Debug::LYXVC, "\tlooking for `" << tmpf << '\'');
 	string line;
 	static regex const reg("/(.*)/(.*)/(.*)/(.*)/(.*)");
@@ -587,21 +583,21 @@ void CVS::scanMaster()
 			//sm[5]; // tag or tagdate
 			FileName file(owner_->absFileName());
 			if (file.isReadableFile()) {
-				time_t mod = file.lastModified();
-				string mod_date = rtrim(asctime(gmtime(&mod)), "\n");
+				time_t const mod = file.lastModified();
+				string const mod_date = rtrim(asctime(gmtime(&mod)), "\n");
 				LYXERR(Debug::LYXVC, "Date in Entries: `" << file_date
 					<< "'\nModification date of file: `" << mod_date << '\'');
 				if (file.isReadOnly()) {
 					// readonly checkout is unlocked
-					vcstatus = UNLOCKED;
+					vcstatus_ = UNLOCKED;
 				} else {
 					FileName bdir(addPath(master_.onlyPath().absFileName(),"Base"));
 					FileName base(addName(bdir.absFileName(),name));
 					// if base version is existent "cvs edit" was used to lock
-					vcstatus = base.isReadableFile() ? LOCKED : NOLOCKING;
+					vcstatus_ = base.isReadableFile() ? LOCKED : NOLOCKING;
 				}
 			} else {
-				vcstatus = NOLOCKING;
+				vcstatus_ = NOLOCKING;
 			}
 			break;
 		}
@@ -811,7 +807,7 @@ void CVS::getDiff(OperationMode opmode, FileName const & tmpf)
 
 int CVS::edit()
 {
-	vcstatus = LOCKED;
+	vcstatus_ = LOCKED;
 	return doVCCommand("cvs -q edit " + getTarget(File),
 		FileName(owner_->filePath()));
 }
@@ -819,7 +815,7 @@ int CVS::edit()
 
 int CVS::unedit()
 {
-	vcstatus = UNLOCKED;
+	vcstatus_ = UNLOCKED;
 	return doVCCommand("cvs -q unedit " + getTarget(File),
 		FileName(owner_->filePath()));
 }
@@ -858,7 +854,7 @@ LyXVC::CommandResult CVS::checkIn(string const & msg, string & log)
 	CvsStatus status = getStatus();
 	switch (status) {
 	case UpToDate:
-		if (vcstatus != NOLOCKING)
+		if (vcstatus_ != NOLOCKING)
 			if (unedit())
 				return LyXVC::ErrorCommand;
 		log = "CVS: Proceeded";
@@ -900,7 +896,7 @@ bool CVS::isLocked() const
 
 bool CVS::checkInEnabled()
 {
-	if (vcstatus != NOLOCKING)
+	if (vcstatus_ != NOLOCKING)
 		return isLocked();
 	else
 		return true;
@@ -916,7 +912,7 @@ bool CVS::isCheckInWithConfirmation()
 
 string CVS::checkOut()
 {
-	if (vcstatus != NOLOCKING && edit())
+	if (vcstatus_ != NOLOCKING && edit())
 		return string();
 	TempFile tempfile("lyxvout");
 	FileName tmpf = tempfile.name();
@@ -943,7 +939,7 @@ string CVS::checkOut()
 
 bool CVS::checkOutEnabled()
 {
-	if (vcstatus != NOLOCKING)
+	if (vcstatus_ != NOLOCKING)
 		return !isLocked();
 	else
 		return true;
@@ -1033,7 +1029,7 @@ bool CVS::revert()
 	CvsStatus status = getStatus();
 	switch (status) {
 	case UpToDate:
-		if (vcstatus != NOLOCKING)
+		if (vcstatus_ != NOLOCKING)
 			return 0 == unedit();
 		break;
 	case NeedsMerge:
@@ -1154,39 +1150,30 @@ bool CVS::prepareFileRevisionEnabled()
 //
 /////////////////////////////////////////////////////////////////////
 
-SVN::SVN(FileName const & m, Buffer * b) : VCS(b)
+SVN::SVN(Buffer * b) : VCS(b)
 {
 	// Here we know that the buffer file is either already in SVN or
 	// about to be registered
-	master_ = m;
 	locked_mode_ = false;
 	scanMaster();
 }
 
 
-FileName const SVN::findFile(FileName const & file)
+bool SVN::findFile(FileName const & file)
 {
 	// First we check the existence of repository meta data.
-	if (!VCS::checkparentdirs(file, ".svn")) {
+	if (VCS::checkParentDirs(file, ".svn").empty()) {
 		LYXERR(Debug::LYXVC, "Cannot find SVN meta data for " << file);
-		return FileName();
+		return false;
 	}
 
 	// Now we check the status of the file.
-	TempFile tempfile("lyxvcout");
-	FileName tmpf = tempfile.name();
-	if (tmpf.empty()) {
-		LYXERR(Debug::LYXVC, "Could not generate logfile " << tmpf);
-		return FileName();
-	}
-
 	string const fname = onlyFileName(file.absFileName());
 	LYXERR(Debug::LYXVC, "LyXVC: Checking if file is under svn control for `" << fname << '\'');
-	bool found = 0 == doVCCommandCall("svn info " + quoteName(fname)
-						+ " > " + quoteName(tmpf.toFilesystemEncoding()),
+	bool found = 0 == doVCCommandCall("svn info " + quoteName(fname),
 						file.onlyPath());
 	LYXERR(Debug::LYXVC, "SVN control: " << (found ? "enabled" : "disabled"));
-	return found ? file : FileName();
+	return found;
 }
 
 
@@ -1194,13 +1181,9 @@ void SVN::scanMaster()
 {
 	// vcstatus code is somewhat superflous,
 	// until we want to implement read-only toggle for svn.
-	vcstatus = NOLOCKING;
-	if (checkLockMode()) {
-		if (isLocked())
-			vcstatus = LOCKED;
-		else
-			vcstatus = UNLOCKED;
-	}
+	vcstatus_ = NOLOCKING;
+	if (checkLockMode())
+		vcstatus_ = isLocked() ? LOCKED : UNLOCKED;
 }
 
 
@@ -1256,7 +1239,7 @@ bool SVN::retrieve(FileName const & file)
 
 void SVN::registrer(string const & /*msg*/)
 {
-	doVCCommand("svn add -q " + quoteName(onlyFileName(owner_->absFileName())),
+	doVCCommand("svn add -q --parents " + quoteName(onlyFileName(owner_->absFileName())),
 		    FileName(owner_->filePath()));
 }
 
@@ -1827,42 +1810,31 @@ bool SVN::toggleReadOnlyEnabled()
 //
 /////////////////////////////////////////////////////////////////////
 
-GIT::GIT(FileName const & m, Buffer * b) : VCS(b)
+GIT::GIT(Buffer * b) : VCS(b)
 {
 	// Here we know that the buffer file is either already in GIT or
 	// about to be registered
-	master_ = m;
 	scanMaster();
 }
 
 
-FileName const GIT::findFile(FileName const & file)
+bool GIT::findFile(FileName const & file)
 {
 	// First we check the existence of repository meta data.
-	if (!VCS::checkparentdirs(file, ".git")) {
+	if (VCS::checkParentDirs(file, ".git").empty()) {
 		LYXERR(Debug::LYXVC, "Cannot find GIT meta data for " << file);
-		return FileName();
+		return false;
 	}
 
-	// Now we check the status of the file.
-	TempFile tempfile("lyxvcout");
-	FileName tmpf = tempfile.name();
-	if (tmpf.empty()) {
-		LYXERR(Debug::LYXVC, "Could not generate logfile " << tmpf);
-		return FileName();
-	}
-
+	// Now we check if the file is known to git.
 	string const fname = onlyFileName(file.absFileName());
 	LYXERR(Debug::LYXVC, "LyXVC: Checking if file is under git control for `"
 			<< fname << '\'');
-	doVCCommandCall("git ls-files " +
-			quoteName(fname) + " > " +
-			quoteName(tmpf.toFilesystemEncoding()),
+	int const ret = doVCCommandCall("git log -n 0 " + quoteName(fname),
 			file.onlyPath());
-	tmpf.refresh();
-	bool found = !tmpf.isFileEmpty();
+	bool const found = (ret == 0);
 	LYXERR(Debug::LYXVC, "GIT control: " << (found ? "enabled" : "disabled"));
-	return found ? file : FileName();
+	return found;
 }
 
 
@@ -1870,7 +1842,7 @@ void GIT::scanMaster()
 {
 	// vcstatus code is somewhat superflous,
 	// until we want to implement read-only toggle for git.
-	vcstatus = NOLOCKING;
+	vcstatus_ = NOLOCKING;
 }
 
 

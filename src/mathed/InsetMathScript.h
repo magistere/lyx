@@ -32,6 +32,10 @@ public:
 	InsetMathScript(Buffer * buf, MathAtom const & at, bool up);
 	///
 	mode_type currentMode() const override { return MATH_MODE; }
+	/// whether the inset has limit-like sub/superscript
+	Limits limits() const override;
+	/// sets types of sub/superscripts
+	void limits(Limits lim) override;
 	///
 	MathClass mathClass() const override;
 	///
@@ -53,7 +57,7 @@ public:
 	size_type lastIdx() const override { return 0; }
 
 	/// write LaTeX and Lyx code
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// write normalized content
 	void normalize(NormalStream &) const override;
 	/// write content as something readable by Maple
@@ -61,7 +65,7 @@ public:
 	/// write content as something readable by Mathematica
 	void mathematica(MathematicaStream &) const override;
 	/// write content as MathML
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	/// write content as HTML
 	void htmlize(HtmlStream &) const override;
 	/// write content as something readable by Octave

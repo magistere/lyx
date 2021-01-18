@@ -55,13 +55,16 @@
 #include "support/lassert.h"
 #include "support/lstrings.h"
 #include "support/os.h"
-#include "support/signals.h"
 
 #include <iostream>
 
 #ifdef _WIN32
-#include <io.h>
-#include <QCoreApplication>
+# include <io.h>
+# include <QCoreApplication>
+#else
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
 #endif
 #include <QThread>
 
@@ -863,7 +866,7 @@ int LyXComm::startPipe(string const & file, bool write)
 	if (!write) {
 		// Make sure not to call read_ready after destruction.
 		weak_ptr<void> tracker = tracker_.p();
-		theApp()->registerSocketCallback(fd, [=](){
+		theApp()->registerSocketCallback(fd, [this, tracker](){
 				if (!tracker.expired())
 					read_ready();
 			});

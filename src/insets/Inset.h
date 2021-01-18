@@ -17,11 +17,11 @@
 
 #include "ColorCode.h"
 #include "InsetCode.h"
-#include "InsetLayout.h"
 #include "LayoutEnums.h"
 #include "OutputEnums.h"
 #include "OutputParams.h"
 
+#include "support/docstring.h"
 #include "support/strfwd.h"
 #include "support/types.h"
 
@@ -452,7 +452,7 @@ public:
 	///
 	virtual InsetLayout const & getLayout() const;
 	///
-	virtual bool isPassThru() const { return getLayout().isPassThru(); }
+	virtual bool isPassThru() const;
 	/// Is this inset embedded in a title?
 	virtual bool isInTitle() const { return false; }
 	/// Is this inset's layout defined in the document's textclass?
@@ -466,6 +466,9 @@ public:
 	/// is this equivalent to a space (which is BTW different from
 	/// a line separator)?
 	virtual bool isSpace() const { return false; }
+	/// returns chars, words if the inset is equivalent to such, otherwise
+	/// (0,0), which should be interpreted as 'false'
+	virtual std::pair<int, int> isWords() const { return std::pair<int,int>(0, 0); }
 	/// does this inset try to use all available space (like \\hfill does)?
 	virtual bool isHfill() const { return false; }
 

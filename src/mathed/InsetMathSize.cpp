@@ -59,7 +59,7 @@ void InsetMathSize::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathSize::write(WriteStream & os) const
+void InsetMathSize::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "{\\" << key_->name << ' ' << cell(0) << '}';
@@ -73,7 +73,7 @@ void InsetMathSize::write(WriteStream & os) const
 //	\scriptscriptstyle. The corresponding values of displaystyle and scriptlevel
 //	for those TeX styles would be "true" and "0", "false" and "0", "false" and "1",
 //	and "false" and "2", respectively.
-void InsetMathSize::mathmlize(MathStream & ms) const
+void InsetMathSize::mathmlize(MathMLStream & ms) const
 {
 	string const & name = to_utf8(key_->name);
 	bool dispstyle = (name == "displaystyle");

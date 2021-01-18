@@ -34,7 +34,7 @@ public:
 	///
 	void draw(PainterInfo &, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// write normalized content
 	void normalize(NormalStream & ns) const override;
 	///
@@ -44,7 +44,7 @@ public:
 	///
 	void octave(OctaveStream &) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

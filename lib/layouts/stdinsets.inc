@@ -4,7 +4,7 @@
 #
 # Detailed format description is available in the customization manual
 
-Format 89
+Format 90
 
 Provides stdinsets 1
 
@@ -16,7 +16,7 @@ OutlinerName index        "Index Entries" #no AddToToc (built-in)
 OutlinerName listing      "Listings" #no AddToToc (built-in)
 
 InsetLayout Marginal
-	LabelString           margin
+	LabelString           Margin
 	LatexType             command
 	LatexName             marginpar
 	Font

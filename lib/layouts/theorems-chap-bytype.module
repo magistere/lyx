@@ -12,9 +12,9 @@
 
 # Author: Paul Rubin <rubin@msu.edu> (hacked from Richard Kimberly Heck's various modules)
 
-Format 89
+Format 90
 
-Input theorem-counters-bytype.inc
+Input theorems-counters-bytype.inc
 
 Counter theorem
 	Within chapter

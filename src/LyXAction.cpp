@@ -2226,6 +2226,20 @@ void LyXAction::init()
 		{ LFUN_INSET_SETTINGS, "inset-settings", ReadOnly | AtPoint, Edit },
 
 /*!
+ * \var lyx::FuncCode lyx::LFUN_INSET_SPLIT
+ * \li Action: Splits the current inset into two at current position.
+ * \li Syntax: inset-split [<INSET>]
+ * \li Params: <INSET>: this can be used to make sure the right kind of inset
+			is dissolved. For example "split" entry in the charstyles
+			sub-menu should only dissolve the charstyle inset, even if the
+			cursor is inside several nested insets of different type.\n
+			For values see #lyx::InsetLayout::lyxtype_ .
+ * \li Origin: spitz, 22 Dec 2020
+ * \endvar
+ */
+		{ LFUN_INSET_SPLIT, "inset-split", AtPoint, Edit },
+
+/*!
  * \var lyx::FuncCode lyx::LFUN_INSET_TOGGLE
  * \li Action: Toggles the collapsible inset at cursor position,
                or the inset we are currently in.
@@ -3680,10 +3694,11 @@ void LyXAction::init()
 
 /*!
  * \var lyx::FuncCode lyx::LFUN_SET_COLOR
- * \li Action: Set the given LyX color to the color defined by the X11 name given.
+ * \li Action: Set the given LyX color to the color defined by the X11 name given,
+ *             and optionally a specific color for dark mode.
  * \li Notion: A new color entry is created if the color is unknown.
                Color names can be stored as a part of user settings.
- * \li Syntax: set-color <LYX_NAME> <X11_NAME>
+ * \li Syntax: set-color <LYX_NAME> <X11_NAME> [<X11_DARKNAME>]
  * \li Origin: SLior, 11 Jun 2000
  * \endvar
  */
@@ -3973,6 +3988,19 @@ void LyXAction::init()
 * \endvar
 */
 		{ LFUN_TOOLBAR_MOVABLE, "toolbar-movable", NoBuffer, Buffer },
+
+/*!
+ * \var lyx::FuncCode lyx::LFUN_TOOLBAR_SET
+ * \li Action: Sets visibility of a given toolbar to on, off, or auto.
+ * \li Notion: Skipping "auto" when allowauto is false.
+ * \li Syntax: toolbar-set <NAME> [on|off|auto]
+ * \li Params: <NAME>: standard|extra|table|math|mathmacrotemplate|\n
+		       minibuffer|review|view/update|math_panels|vcs|
+		       view-others|update-others
+ * \li Origin: spitz, 17 Dec 2020
+ * \endvar
+ */
+		{ LFUN_TOOLBAR_SET, "toolbar-set", NoBuffer, Buffer },
 
 /*!
  * \var lyx::FuncCode lyx::LFUN_TOOLBAR_TOGGLE

@@ -19,6 +19,7 @@
 
 #include "support/signals.h"
 
+#include <memory>
 
 namespace lyx {
 
@@ -39,9 +40,6 @@ public:
 		  support::FileName const & from_file, std::string const & to_file_base,
 		  std::string const & from_format, std::string const & to_format);
 
-	/// Needed for the pimpl
-	~Converter();
-
 	/// We are explicit about when we begin the conversion process.
 	void startConversion() const;
 
@@ -50,10 +48,10 @@ public:
 	 *  If the conversion is successful, then the listener is passed \c true.
 	 *  The connection is closed when this is destroyed.
 	 */
-	typedef signals2::signal<void(bool)> sig_type;
+	typedef signal<void(bool)> sig_type;
 	typedef sig_type::slot_type slot_type;
 	///
-	signals2::connection connect(slot_type const &) const;
+	connection connect(slot_type const &) const;
 
 	/** If the conversion is successful, this returns the name of the
 	 *  resulting file.
@@ -70,7 +68,7 @@ private:
 	/// Use the Pimpl idiom to hide the internals.
 	class Impl;
 	/// The pointer never changes although *pimpl_'s contents may.
-	Impl * const pimpl_;
+	std::shared_ptr<Impl> const pimpl_;
 };
 
 } // namespace graphics

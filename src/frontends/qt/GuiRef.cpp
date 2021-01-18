@@ -67,7 +67,7 @@ GuiRef::GuiRef(GuiView & lv)
 	        refsTW, SLOT(setFocus()));
 #else
 	connect(filter_, &FancyLineEdit::downPressed,
-	        refsTW, [=](){ focusAndHighlight(refsTW); });
+	        refsTW, [this](){ focusAndHighlight(refsTW); });
 #endif
 
 	filterBarL->addWidget(filter_, 0);
@@ -145,13 +145,14 @@ void GuiRef::enableView(bool enable)
 void GuiRef::enableBoxes()
 {
 	QString const reftype =
-		typeCO->itemData(typeCO->currentIndex()).toString();
+	    typeCO->itemData(typeCO->currentIndex()).toString();
 	bool const isFormatted = (reftype == "formatted");
 	bool const isLabelOnly = (reftype == "labelonly");
 	bool const usingRefStyle = buffer().params().use_refstyle;
-	pluralCB->setEnabled(isFormatted && usingRefStyle);
-	capsCB->setEnabled(isFormatted && usingRefStyle);
-	noprefixCB->setEnabled(isLabelOnly);
+	bool const intext = bufferview()->cursor().inTexted();
+	pluralCB->setEnabled(intext && isFormatted && usingRefStyle);
+	capsCB->setEnabled(intext && isFormatted && usingRefStyle);
+	noprefixCB->setEnabled(intext && isLabelOnly);
 }
 
 
@@ -317,18 +318,15 @@ void GuiRef::updateContents()
 	typeCO->clear();
 
 	// FIXME Bring InsetMathRef on par with InsetRef
-	// (see #9798)
+	// (see #11104)
 	typeCO->addItem(qt_("<reference>"), "ref");
 	typeCO->addItem(qt_("(<reference>)"), "eqref");
 	typeCO->addItem(qt_("<page>"), "pageref");
 	typeCO->addItem(qt_("on page <page>"), "vpageref");
 	typeCO->addItem(qt_("<reference> on page <page>"), "vref");
 	typeCO->addItem(qt_("Textual reference"), "nameref");
-	if (bufferview()->cursor().inTexted()) {
-		typeCO->addItem(qt_("Formatted reference"), "formatted");
-		typeCO->addItem(qt_("Label only"), "labelonly");
-	} else
-		typeCO->addItem(qt_("Formatted reference"), "prettyref");
+	typeCO->addItem(qt_("Formatted reference"), "formatted");
+	typeCO->addItem(qt_("Label only"), "labelonly");
 
 	referenceED->setText(toqstr(params_["reference"]));
 
@@ -615,6 +613,7 @@ void GuiRef::dispatchParams()
 {
 	std::string const lfun = InsetCommand::params2string(params_);
 	dispatch(FuncRequest(getLfun(), lfun));
+	connectToNewInset();
 }
 
 

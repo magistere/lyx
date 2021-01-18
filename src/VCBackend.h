@@ -35,7 +35,7 @@ public:
 		NOLOCKING,
 	};
 
-	VCS(Buffer * b) : vcstatus(NOLOCKING), owner_(b) {}
+	VCS(Buffer * b) : vcstatus_(NOLOCKING), owner_(b) {}
 	virtual ~VCS() {}
 
 	/// the name of the vc backend
@@ -92,7 +92,7 @@ public:
 	/// return the owning buffer
 	Buffer * owner() const { return owner_; }
 	/// return the lock status of this file
-	VCStatus status() const { return vcstatus; }
+	VCStatus status() const { return vcstatus_; }
 	/// do we need special handling for read-only toggling?
 	/// (also used for check-out operation)
 	virtual bool toggleReadOnlyEnabled() = 0;
@@ -103,9 +103,15 @@ public:
 	/// can this operation be processed in the current VCS?
 	virtual bool prepareFileRevisionEnabled() = 0;
 
-	/// Check the directory of file and all parent directories
-	/// for the existence of repository-info like .git or .svn
-	static bool checkparentdirs(support::FileName const & file, std::string const & vcsdir);
+	/// Check the directory given in start and all parent directories
+	/// for the existence of some other file
+	/// \param start : where we start looking (we will strip the filename if given
+	///			and just use the directory
+	/// \param file : the directory or file for which to look
+	///			Note that this can be e.g. ".git/index", so we will look for the .git
+	///			directory and also for an index file in it.
+	/// Returns a FileName object for the found file or else an empty FileName
+	static support::FileName checkParentDirs(support::FileName const & start, std::string const & file);
 
 protected:
 	/// parse information from the version file
@@ -123,16 +129,11 @@ protected:
 	 * @param path the path from which to execute
 	 * @return exit status
 	 */
-	static int doVCCommandCall(std::string const & cmd, support::FileName const & path);
-
-	/**
-	 * The master VC file. For RCS this is *,v or RCS/ *,v. master should
-	 * have full path.
-	 */
-	support::FileName master_;
+	static int doVCCommandCall(std::string const & cmd,
+			support::FileName const & path = support::FileName());
 
 	/// The status of the VC controlled file.
-	VCStatus vcstatus;
+	VCStatus vcstatus_;
 
 	/// The buffer using this VC
 	Buffer * const owner_;
@@ -146,7 +147,8 @@ public:
 	explicit
 	RCS(support::FileName const & m, Buffer * b);
 
-	/// return the revision file for the given file, if found
+	/// Determine whether the file is under RCS control
+	/// \return the file containing the meta-data (FILE,v) if so, else empty
 	static support::FileName const findFile(support::FileName const & file);
 
 	/// get file from repo, the caller must ensure that it does not exist locally
@@ -210,6 +212,12 @@ protected:
 private:
 	bool getRevisionInfo();
 	/**
+	 * The master VC file. For RCS this is *,v or RCS/ *,v.
+	 * master should have full path.
+	 */
+	support::FileName master_;
+
+	/**
 	 * The version of the VC file. I am not sure if this can be a
 	 * string or if it must be a float/int.
 	 */
@@ -232,7 +240,8 @@ public:
 	explicit
 	CVS(support::FileName const & m, Buffer * b);
 
-	/// return the revision file for the given file, if found
+	/// Determine whether the file is under CVS control
+	/// \return the file containing the meta-data (CVS/entries) if so, else empty
 	static support::FileName const findFile(support::FileName const & file);
 
 	/// get file from repo, the caller must ensure that it does not exist locally
@@ -314,6 +323,11 @@ protected:
 	};
 
 private:
+	/**
+	 * The master VC file. For CVS this is CVS/Entries
+	 * master should have full path.
+	 */
+	support::FileName master_;
 	// revision number from scanMaster
 	std::string version_;
 
@@ -371,10 +385,10 @@ class SVN : public VCS {
 public:
 	///
 	explicit
-	SVN(support::FileName const & m, Buffer * b);
+	SVN(Buffer * b);
 
-	/// return the revision file for the given file, if found
-	static support::FileName const findFile(support::FileName const & file);
+	/// Determine whether the file is under SVN control
+	static bool findFile(support::FileName const & file);
 
 	/// get file from repo, the caller must ensure that it does not exist locally
 	static bool retrieve(support::FileName const & file);
@@ -481,10 +495,11 @@ class GIT : public VCS {
 public:
 	///
 	explicit
-	GIT(support::FileName const & m, Buffer * b);
+	GIT(Buffer * b);
 
-	/// return the revision file for the given file, if found
-	static support::FileName const findFile(support::FileName const & file);
+	/// Determine whether the file is under GIT control
+	/// \return the file itself if so, else empty
+	static bool findFile(support::FileName const & file);
 
 	/// get file from repo, the caller must ensure that it does not exist locally
 	static bool retrieve(support::FileName const & file);

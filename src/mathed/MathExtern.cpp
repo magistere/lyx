@@ -599,7 +599,7 @@ void extractFunctions(MathData & ar, ExternalMath kind)
 		extractScript(exp, jt, ar.end(), true);
 
 		// create a proper inset as replacement
-		auto p = make_unique<InsetMathExFunc>(buf, name);
+		auto p = lyx::make_unique<InsetMathExFunc>(buf, name);
 
 		// jt points to the "argument". Get hold of this.
 		MathData::iterator st =
@@ -684,7 +684,7 @@ void extractIntegrals(MathData & ar, ExternalMath kind)
 			continue;
 
 		// core is part from behind the scripts to the 'd'
-		auto p = make_unique<InsetMathExInt>(buf, from_ascii("int"));
+		auto p = lyx::make_unique<InsetMathExInt>(buf, from_ascii("int"));
 
 		// handle scripts if available
 		if (!testIntSymbol(*it)) {
@@ -769,7 +769,7 @@ void extractSums(MathData & ar)
 			continue;
 
 		// create a proper inset as replacement
-		auto p = make_unique<InsetMathExInt>(buf, from_ascii("sum"));
+		auto p = lyx::make_unique<InsetMathExInt>(buf, from_ascii("sum"));
 
 		// collect lower bound and summation index
 		InsetMathScript const * sub = ar[i]->asScriptInset();
@@ -857,7 +857,7 @@ void extractDiff(MathData & ar)
 		}
 
 		// create a proper diff inset
-		auto diff = make_unique<InsetMathDiff>(buf);
+		auto diff = lyx::make_unique<InsetMathDiff>(buf);
 
 		// collect function, let jt point behind last used item
 		MathData::iterator jt = it + 1;
@@ -1395,7 +1395,7 @@ namespace {
 
 } // namespace
 
-void write(MathData const & dat, WriteStream & wi)
+void write(MathData const & dat, TeXMathStream & wi)
 {
 	wi.firstitem() = true;
 	docstring s;
@@ -1419,7 +1419,7 @@ void write(MathData const & dat, WriteStream & wi)
 }
 
 
-void writeString(docstring const & s, WriteStream & os)
+void writeString(docstring const & s, TeXMathStream & os)
 {
 	if (!os.latex()) {
 		os << (os.asciiOnly() ? escape(s) : s);
@@ -1436,14 +1436,14 @@ void writeString(docstring const & s, WriteStream & os)
 				os.pendingSpace(space);
 			} catch (EncodingException const & e) {
 				switch (os.output()) {
-				case WriteStream::wsDryrun: {
+				case TeXMathStream::wsDryrun: {
 					os << "<" << _("LyX Warning: ")
 					   << _("uncodable character") << " '";
 					os << docstring(1, e.failed_char);
 					os << "'>";
 					break;
 				}
-				case WriteStream::wsPreview: {
+				case TeXMathStream::wsPreview: {
 					// indicate the encoding error by a boxed '?'
 					os << "{\\fboxsep=1pt\\fbox{?}}";
 					LYXERR0("Uncodable character" << " '"
@@ -1451,7 +1451,7 @@ void writeString(docstring const & s, WriteStream & os)
 						<< "'");
 					break;
 				}
-				case WriteStream::wsDefault:
+				case TeXMathStream::wsDefault:
 				default:
 					// throw again
 					throw;
@@ -1510,14 +1510,14 @@ void writeString(docstring const & s, WriteStream & os)
 				os.pendingSpace(true);
 		} catch (EncodingException const & e) {
 			switch (os.output()) {
-			case WriteStream::wsDryrun: {
+			case TeXMathStream::wsDryrun: {
 				os << "<" << _("LyX Warning: ")
 				   << _("uncodable character") << " '";
 				os << docstring(1, e.failed_char);
 				os << "'>";
 				break;
 			}
-			case WriteStream::wsPreview: {
+			case TeXMathStream::wsPreview: {
 				// indicate the encoding error by a boxed '?'
 				os << "{\\fboxsep=1pt\\fbox{?}}";
 				LYXERR0("Uncodable character" << " '"
@@ -1525,7 +1525,7 @@ void writeString(docstring const & s, WriteStream & os)
 					<< "'");
 				break;
 			}
-			case WriteStream::wsDefault:
+			case TeXMathStream::wsDefault:
 			default:
 				// throw again
 				throw;
@@ -1586,7 +1586,7 @@ void mathematica(MathData const & dat, MathematicaStream & os)
 }
 
 
-void mathmlize(MathData const & dat, MathStream & ms)
+void mathmlize(MathData const & dat, MathMLStream & ms)
 {
 	MathData ar = dat;
 	extractStructure(ar, MATHML);

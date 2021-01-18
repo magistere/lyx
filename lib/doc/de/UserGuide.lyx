@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 600
+\lyxformat 601
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -31934,24 +31934,15 @@ Sollen die Zeichen |
 
 in Nomenklatureinträgen mit \SpecialChar TeX
 -Code erscheinen, müssen sie geschützt werden.
- indem man ein Anführungszeichen davor setzt.
+ indem man ein Prozentzeichen davor setzt.
  Um zu verhindern, dass das Anführungszeichen nachfolgende Zeichen beeinflusst,
  wird es mit einem leeren \SpecialChar TeX
--Klammerpaar abgeschlossen: ""{}
-\begin_inset Note Note
-status open
-
-\begin_layout Plain Layout
+-Klammerpaar abgeschlossen: %"{}
 \begin_inset CommandInset nomenclature
 LatexCommand nomenclature
-symbol "\"@, \"|, \"!, \"\"{}"
-description "Das Anführungszeichen wird im TeX-Code mit der Sequenz ' \"\"{}\"\"{} ' ausgegeben."
+symbol "%@, %|, %!, %\"{}"
+description "Das Anführungszeichen wird im TeX-Code mit der Sequenz ' %\"{}%\"{} ' ausgegeben."
 literal "true"
-
-\end_inset
-
-
-\end_layout
 
 \end_inset
 
@@ -34664,10 +34655,10 @@ name "sec:Dokumentteile-vorschauen"
 
 
 \begin_inset Index idx
-status collapsed
+status open
 
 \begin_layout Plain Layout
-Sofortige Vorschau
+Eingebettete Vorschau
 \end_layout
 
 \end_inset
@@ -34784,7 +34775,7 @@ Anzeige
  aktivieren.
  Dann setzen Sie 
 \family sans
-Sofortige
+Eingebettete
 \begin_inset space \space{}
 \end_inset
 
@@ -34805,7 +34796,7 @@ Vorschaugröße
 \begin_layout Standard
 Wenn Sie alles außer Mathe vorschauen wollen, setzen Sie 
 \family sans
-Sofortige
+Eingebettete
 \begin_inset space \space{}
 \end_inset
 
@@ -38548,12 +38539,16 @@ enen Werkzeugleisten eingestellt werden.
 Befehlseingabefenster
 \family default
  können an- und ausgeschaltet werden.
- Der Zustand 
+ Der Status 
 \emph on
 an
 \emph default
  ist im Menü mit einem Häkchen gekennzeichnet.
- Die Werkzeugleisten 
+ 
+\end_layout
+
+\begin_layout Standard
+Die Werkzeugleisten 
 \family sans
 Überarbeiten
 \family default
@@ -38571,29 +38566,36 @@ Kontrollflächen
 \family default
 , 
 \family sans
-Mathe-Makros
+Mathe-Makros,
 \family default
- und 
+ 
 \family sans
 Mathe
 \family default
- können zusätzlich auf den Zustand 
+ und 
+\family sans
+Phonetische Symbole
+\family default
+ können zusätzlich auf den Status 
 \emph on
 automatisch
 \emph default
- gesetzt werden, der im Menü mit dem Suffix 
-\family sans
-(automatisch)
-\family default
- gekennzeichnet ist.
+ gesetzt werden.
+ Der Status dieser Werkzeugleisten wird in einem Untermenü mit den Einträgen
+ Ein, Aus und Automatisch gesetzt und angezeigt.
 \end_layout
 
 \begin_layout Standard
-Im Zustand 
+Im Status 
 \emph on
 an
 \emph default
- wird die Werkzeugleiste permanent angezeigt, im Zustand 
+ wird die Werkzeugleiste permanent angezeigt, im Status 
+\emph on
+aus
+\emph default
+ nie.
+ Im Zustand 
 \emph on
 automatisch
 \emph default
@@ -38603,13 +38605,18 @@ automatisch
 \family sans
 Überarbeiten
 \family default
- nur angezeigt wird, wenn Änderungsverfolgung aktiviert ist, die Mathe und
- Tabellen Werkzeugleisten werden nur angezeigt, wenn der Cursor in einer
+ nur angezeigt wird, wenn Änderungsverfolgung aktiviert ist, die Mathe-
+ und Tabellen-Werkzeugleisten werden nur angezeigt, wenn der Cursor in einer
  Formel bzw.
 \begin_inset space \space{}
 \end_inset
 
-Tabelle ist.
+Tabelle ist, die Werkzeugleiste mit phonetischen Symbolen nur in der Einfügung
+ 
+\emph on
+Phonetische Symbole
+\emph default
+.
 \end_layout
 
 \begin_layout Standard
@@ -46482,9 +46489,9 @@ Hier kann festgelegt werden, ob Grafiken in \SpecialChar LyX
 \begin_layout Standard
 
 \family sans
-Sofortige Vorschau
+Eingebettete Vorschau
 \family default
- aktiviert die sofortige Vorschau von Dokumentteilen.
+ aktiviert die lokale Vorschau von Dokumentteilen.
  Dieses Feature ist in Abschnitt
 \begin_inset space ~
 \end_inset

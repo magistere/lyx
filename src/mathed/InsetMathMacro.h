@@ -45,7 +45,7 @@ public:
 	/// Whether the inset allows \(no)limits
 	bool allowsLimitsChange() const;
 	/// The default limits value
-	Limits defaultLimits() const override;
+	Limits defaultLimits(bool display) const override;
 	/// whether the inset has limit-like sub/superscript
 	Limits limits() const override;
 	/// sets types of sub/superscripts
@@ -95,7 +95,7 @@ public:
 	mode_type currentMode() const override;
 
 	/// Assumes that macros are up-to-date
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void normalize(NormalStream & os) const override;
 	///
@@ -105,7 +105,7 @@ public:
 	///
 	void mathematica(MathematicaStream &) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

@@ -60,8 +60,7 @@ bool lyxfind(BufferView * bv, FuncRequest const & ev);
  * The string is encoded by \c replace2string.
  * \return whether we did anything
  */
-bool lyxreplace(BufferView * bv,
-		FuncRequest const &, bool has_deleted = false);
+bool lyxreplace(BufferView * bv, FuncRequest const &);
 
 /// find the next change in the buffer
 bool findNextChange(BufferView * bv);
@@ -105,6 +104,7 @@ public:
 	bool casesensitive;
 	bool matchword;
 	bool forward;
+	bool matchstart;
 	bool expandmacros;
 	bool ignoreformat;
 	/// This is docstring() if no replace was requested
@@ -125,7 +125,7 @@ std::ostringstream & operator<<(std::ostringstream & os, lyx::FindAndReplaceOpti
 std::istringstream & operator>>(std::istringstream & is, lyx::FindAndReplaceOptions & opt);
 
 /// Perform a FindAdv operation.
-bool findAdv(BufferView * bv, FindAndReplaceOptions const & opt);
+bool findAdv(BufferView * bv, FindAndReplaceOptions & opt);
 
 /** Computes the simple-text or LaTeX export (depending on opt) of buf starting
  ** from cur and ending len positions after cur, if len is positive, or at the

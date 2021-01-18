@@ -74,7 +74,7 @@ void InsetMathDelim::validate(LaTeXFeatures & features) const
 }
 
 
-void InsetMathDelim::write(WriteStream & os) const
+void InsetMathDelim::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "\\left" << convertDelimToLatexName(left_) << cell(0)
@@ -179,22 +179,19 @@ void InsetMathDelim::mathematica(MathematicaStream & os) const
 }
 
 
-void InsetMathDelim::mathmlize(MathStream & ms) const
+void InsetMathDelim::mathmlize(MathMLStream & ms) const
 {
-	ms << "<" << from_ascii(ms.namespacedTag("mo")) << " form='prefix' fence='true' stretchy='true' symmetric='true'>"
-	   << "<" << from_ascii(ms.namespacedTag("mrow")) << ">"
+	ms << "<" << from_ascii(ms.namespacedTag("mrow")) << ">" << "\n"
+	   << "<" << from_ascii(ms.namespacedTag("mo")) << " form='prefix' fence='true' stretchy='true' symmetric='true'>"
 	   << convertDelimToXMLEscape(left_, ms.xmlMode())
-	   << "</" << from_ascii(ms.namespacedTag("mrow")) << ">"
 	   << "</" << from_ascii(ms.namespacedTag("mo")) << ">"
 	   << "\n"
 	   << cell(0)
 	   << "\n"
 	   << "<" << from_ascii(ms.namespacedTag("mo")) << " form='postfix' fence='true' stretchy='true' symmetric='true'>"
-	   << "<" << from_ascii(ms.namespacedTag("mrow")) << ">"
 	   << convertDelimToXMLEscape(right_, ms.xmlMode())
-	   << "</" << from_ascii(ms.namespacedTag("mrow")) << ">"
-	   << "</" << from_ascii(ms.namespacedTag("mo")) << ">"
-	   << "\n";
+	   << "</" << from_ascii(ms.namespacedTag("mo")) << ">" << "\n"
+	   << "</" << from_ascii(ms.namespacedTag("mrow")) << ">" << "\n";
 }
 
 

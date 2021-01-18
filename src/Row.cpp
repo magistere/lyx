@@ -336,7 +336,7 @@ bool Row::setExtraWidth(int w)
 	// amount of expansion: number of expanders time the em value for each
 	// string element
 	int exp_amount = 0;
-	for (Row::Element const & e : elements_)
+	for (Element const & e : elements_)
 		exp_amount += e.expansionAmount();
 	if (!exp_amount)
 		return false;
@@ -346,8 +346,8 @@ bool Row::setExtraWidth(int w)
 		// do not stretch more than MAX_SPACE_STRETCH em per expander
 		return false;
 	// add extra length to each element proportionally to its em.
-	for (Row::Element & e : elements_)
-		if (e.type == Row::STRING)
+	for (Element & e : elements_)
+		if (e.type == STRING)
 			e.setExtra(extra_per_em);
 	// update row dimension
 	dim_.wid += w;
@@ -624,17 +624,19 @@ Row::findElement(pos_type const pos, bool const boundary, double & x) const
 			&& !begin()->isVirtual()))
 		return begin();
 
-	Row::const_iterator cit = begin();
+	const_iterator cit = begin();
 	for ( ; cit != end() ; ++cit) {
-		/** Look whether the cursor is inside the element's
-		 * span. Note that it is necessary to take the
-		 * boundary into account, and to accept virtual
-		 * elements, which have pos == endpos.
+		/** Look whether the cursor is inside the element's span. Note
+		 * that it is necessary to take the boundary into account, and
+		 * to accept virtual elements, in which case the position
+		 * will be before the virtual element.
 		 */
-		if (pos + boundary_corr >= cit->pos
-		    && (pos + boundary_corr < cit->endpos || cit->isVirtual())) {
-				x += cit->pos2x(pos);
-				break;
+		if (cit->isVirtual() && pos + boundary_corr == cit->pos)
+			break;
+		else if (pos + boundary_corr >= cit->pos
+		         && pos + boundary_corr < cit->endpos) {
+			x += cit->pos2x(pos);
+			break;
 		}
 		x += cit->full_width();
 	}

@@ -68,7 +68,7 @@ void InsetMathXArrow::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathXArrow::write(WriteStream & os) const
+void InsetMathXArrow::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << '\\' << name_;
@@ -84,7 +84,7 @@ void InsetMathXArrow::normalize(NormalStream & os) const
 }
 
 
-void InsetMathXArrow::mathmlize(MathStream & ms) const
+void InsetMathXArrow::mathmlize(MathMLStream & ms) const
 {
 	char const * arrow;
 

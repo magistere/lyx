@@ -654,6 +654,19 @@ string const addName(string const & path, string const & fname)
 }
 
 
+string const addPathName(std::string const & path, std::string const & fname)
+{
+	string const pathpart = onlyPath(fname);
+	string const namepart = onlyFileName(fname);
+	string newpath = path;
+	if (!pathpart.empty())
+		newpath = addPath(newpath, pathpart);
+	if (!namepart.empty())
+		newpath = addName(newpath, namepart);
+	return newpath;
+}
+
+
 // Strips path from filename
 string const onlyFileName(string const & fname)
 {
@@ -670,8 +683,12 @@ string const onlyFileName(string const & fname)
 
 
 // Search the string for ${VAR} and $VAR and replace VAR using getenv.
+// If VAR does not exist, ${VAR} and $VAR are left as is in the string.
 string const replaceEnvironmentPath(string const & path)
 {
+	if (!contains(path, '$'))
+		return path;
+
 	// ${VAR} is defined as
 	// $\{[A-Za-z_][A-Za-z_0-9]*\}
 	static string const envvar_br = "[$]\\{([A-Za-z_][A-Za-z_0-9]*)\\}";
@@ -689,14 +706,23 @@ string const replaceEnvironmentPath(string const & path)
 		string result = path;
 		while (1) {
 			smatch what;
+			bool brackets = true;
 			if (!regex_match(result, what, envvar_br_re)) {
+				brackets = false;
 				if (!regex_match(result, what, envvar_re))
 					break;
 			}
 			string env_var = getEnv(what.str(2));
+			if (env_var.empty()) {
+				// temporarily use escape (0x1B) in place of $
+				if (brackets)
+					env_var = "\e{" + what.str(2) + '}';
+				else
+					env_var = "\e" + what.str(2);
+			}
 			result = what.str(1) + env_var + what.str(3);
 		}
-		return result;
+		return subst(result, '\e', '$');
 	} catch (exception const & e) {
 		LYXERR0("Something is very wrong: " << e.what());
 		return path;
@@ -1134,7 +1160,7 @@ cmd_ret const runCommand(string const & cmd)
 FileName const findtexfile(string const & fil, string const & /*format*/,
 						   bool const onlykpse)
 {
-	/* There is no problem to extend this function too use other
+	/* There is no problem to extend this function to use other
 	   methods to look for files. It could be setup to look
 	   in environment paths and also if wanted as a last resort
 	   to a recursive find. One of the easier extensions would

@@ -29,11 +29,11 @@ public:
 	///
 	void draw(PainterInfo & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void normalize(NormalStream & ns) const override;
 	///
-	void mathmlize(MathStream & ms) const override;
+	void mathmlize(MathMLStream & ms) const override;
 	///
 	void htmlize(HtmlStream & ms) const override;
 	///
@@ -64,11 +64,11 @@ public:
 	///
 	void draw(PainterInfo & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// write normalized content
 	void normalize(NormalStream & ns) const override;
 	///
-	void mathmlize(MathStream & ms) const override;
+	void mathmlize(MathMLStream & ms) const override;
 	///
 	void htmlize(HtmlStream & ms) const override;
 	///
@@ -91,11 +91,11 @@ public:
 	///
 	void draw(PainterInfo & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// write normalized content
 	void normalize(NormalStream & ns) const override;
 	///
-	void mathmlize(MathStream & ms) const override;
+	void mathmlize(MathMLStream & ms) const override;
 	///
 	void htmlize(HtmlStream & ms) const override;
 	///
@@ -126,9 +126,9 @@ public:
 	///
 	void draw(PainterInfo & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
-	void mathmlize(MathStream & ms) const override;
+	void mathmlize(MathMLStream & ms) const override;
 	///
 	void htmlize(HtmlStream & ms) const override;
 	/// write normalized content

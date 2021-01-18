@@ -796,23 +796,24 @@ void BufferView::bookmarkEditPosition()
 
 void BufferView::saveBookmark(unsigned int idx)
 {
+	if (buffer().isInternal())
+		return;
+
 	// tentatively save bookmark, id and pos will be used to
 	// acturately locate a bookmark in a 'live' lyx session.
 	// pit and pos will be updated with bottom level pit/pos
 	// when lyx exits.
-	if (!buffer_.isInternal()) {
-		theSession().bookmarks().save(
-			buffer_.fileName(),
-			d->cursor_.bottom().pit(),
-			d->cursor_.bottom().pos(),
-			d->cursor_.paragraph().id(),
-			d->cursor_.pos(),
-			idx
-			);
-		if (idx)
-			// emit message signal.
-			message(_("Save bookmark"));
-	}
+	theSession().bookmarks().save(
+		buffer_.fileName(),
+		d->cursor_.bottom().pit(),
+		d->cursor_.bottom().pos(),
+		d->cursor_.paragraph().id(),
+		d->cursor_.pos(),
+		idx
+	);
+	if (idx)
+		// emit message signal.
+		message(_("Save bookmark"));
 }
 
 
@@ -1023,7 +1024,7 @@ bool BufferView::scrollToCursor(DocIterator const & dit, bool const recenter)
 void BufferView::makeDocumentClass()
 {
 	DocumentClassConstPtr olddc = buffer_.params().documentClassPtr();
-	buffer_.params().makeDocumentClass();
+	buffer_.params().makeDocumentClass(buffer_.isClone(), buffer_.isInternal());
 	updateDocumentClass(olddc);
 }
 
@@ -1250,6 +1251,10 @@ bool BufferView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
 		break;
 	}
 
+	case LFUN_COPY:
+		flag.setEnabled(cur.selection());
+		break;
+
 	default:
 		return false;
 	}
@@ -1448,6 +1453,7 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		break;
 
 	case LFUN_BOOKMARK_SAVE:
+		dr.screenUpdate(Update::Force);
 		saveBookmark(convert<unsigned int>(to_utf8(cmd.argument())));
 		break;
 
@@ -1624,6 +1630,8 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		bool found = lyxfind(this, FuncRequest(LFUN_WORD_FIND, data));
 		if (found)
 			dr.screenUpdate(Update::Force | Update::FitCursor);
+		else
+			dr.setMessage(_("Search string not found!"));
 		break;
 	}
 
@@ -1637,29 +1645,20 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		}
 		if (lyxfind(this, req))
 			dr.screenUpdate(Update::Force | Update::FitCursor);
+		else
+			dr.setMessage(_("Search string not found!"));
 
 		d->search_request_cache_ = req;
 		break;
 	}
 
 	case LFUN_WORD_REPLACE: {
-		bool has_deleted = false;
-		if (cur.selection()) {
-			DocIterator beg = cur.selectionBegin();
-			DocIterator end = cur.selectionEnd();
-			if (beg.pit() == end.pit()) {
-				for (pos_type p = beg.pos() ; p < end.pos() ; ++p) {
-					if (!cur.inMathed() && cur.paragraph().isDeleted(p)) {
-						has_deleted = true;
-						break;
-					}
-				}
-			}
-		}
-		if (lyxreplace(this, cmd, has_deleted)) {
+		if (lyxreplace(this, cmd)) {
 			dr.forceBufferUpdate();
 			dr.screenUpdate(Update::Force | Update::FitCursor);
 		}
+		else
+			dr.setMessage(_("Search string not found!"));
 		break;
 	}
 
@@ -2178,6 +2177,11 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			insertPlaintextFile(FileName(fname), as_paragraph);
 		break;
 	}
+
+	case LFUN_COPY:
+		cap::copySelection(cur);
+		cur.message(_("Copy"));
+		break;
 
 	default:
 		// OK, so try the Buffer itself...

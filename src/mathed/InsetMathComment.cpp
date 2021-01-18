@@ -71,7 +71,7 @@ void InsetMathComment::drawT(TextPainter & pain, int x, int y) const
 }
 
 
-void InsetMathComment::write(WriteStream & os) const
+void InsetMathComment::write(TeXMathStream & os) const
 {
 	os << '%' << cell(0) << "\n";
 }
@@ -83,7 +83,7 @@ void InsetMathComment::maple(MapleStream & os) const
 }
 
 
-void InsetMathComment::mathmlize(MathStream & ms) const
+void InsetMathComment::mathmlize(MathMLStream & ms) const
 {
 	ms << MTag("comment") << cell(0) << ETag("comment");
 }

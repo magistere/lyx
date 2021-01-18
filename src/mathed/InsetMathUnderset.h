@@ -32,11 +32,11 @@ public:
 	///
 	bool idxLast(Cursor &) const override;
 	///
-	void write(WriteStream & ws) const override;
+	void write(TeXMathStream & ws) const override;
 	///
 	void normalize(NormalStream & ns) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

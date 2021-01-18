@@ -119,7 +119,7 @@ public:
 	ImageStatus status_;
 
 	/// This signal is emitted when the image loading status changes.
-	signals2::signal<void()> statusChanged;
+	signal<void()> statusChanged;
 
 	///
 	unique_ptr<Converter> converter_;
@@ -195,7 +195,7 @@ ImageStatus CacheItem::status() const
 }
 
 
-signals2::connection CacheItem::connect(slot_type const & slot) const
+connection CacheItem::connect(slot_type const & slot) const
 {
 	return pimpl_->statusChanged.connect(slot);
 }
@@ -220,7 +220,7 @@ void CacheItem::Impl::startMonitor()
 		return;
 	monitor_ = FileSystemWatcher::activeMonitor(filename_);
 	// Disconnected at the same time as this is destroyed.
-	monitor_->connect([=](bool /* exists */){ startLoading(); });
+	monitor_->connect([this](bool /* exists */){ startLoading(); });
 }
 
 
@@ -442,7 +442,7 @@ void CacheItem::Impl::convertToDisplayFormat()
 	// Connect a signal to this->imageConverted and pass this signal to
 	// the graphics converter so that we can load the modified file
 	// on completion of the conversion process.
-	converter_ = make_unique<Converter>(doc_file_, filename,
+	converter_ = lyx::make_unique<Converter>(doc_file_, filename,
 	                                    to_file_base.absFileName(),
 	                                    from, to_);
 	// Connection is closed at the same time as *this is destroyed.

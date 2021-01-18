@@ -264,9 +264,14 @@ private:
 
 extern GuiApplication * guiApp;
 
-/// \return the icon file name for the given action.
-QString iconName(FuncRequest const & f, bool unknown,
-                 QString const & suffix = QString());
+struct IconInfo {
+	/// Absolute path to icon file
+	QString filepath;
+	/// Swap the icon in RTL mode
+	bool swap;
+	/// Invert the icon in dark mode
+	bool invert;
+};
 
 /// \return the pixmap for the given path, name and extension.
 /// in case of errors a warning is produced and an empty pixmap is returned.

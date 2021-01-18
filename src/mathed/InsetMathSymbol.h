@@ -42,7 +42,7 @@ public:
 	///
 	bool isOrdAlpha() const;
 	/// The default limits value
-	Limits defaultLimits() const override;
+	Limits defaultLimits(bool display) const override;
 	/// whether the inset has limit-like sub/superscript
 	Limits limits() const override { return limits_; }
 	/// sets types of sub/superscripts
@@ -63,7 +63,7 @@ public:
 	///
 	void mathematica(MathematicaStream &) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	/// \param spacing controls whether we print spaces around
@@ -72,7 +72,7 @@ public:
 	///
 	void octave(OctaveStream &) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void infoize2(odocstream & os) const override;
 	///

@@ -137,6 +137,10 @@
 # Incremented to format 34, by yuriy
 #   Rename *.kmap files for Cyrillic languages
 
+# Incremented to format 35, by spitz
+#   \set_color now takes three arguments
+#   \set_color lyxname x11hexname x11darkhexname
+
 # NOTE: The format should also be updated in LYXRC.cpp and
 # in configure.py.
 
@@ -451,6 +455,16 @@ def rename_cyrillic_kmap_files(line):
 	line = line.replace('"koi8-u"', '"ukrainian"')
 	return (True, line)
 
+def add_dark_color(line):
+	if not line.lower().startswith("\\set_color "):
+		return no_match
+	colre = re.compile(r'^\\set_color\s+("[^"]+")\s+("[^"]+")\s*$', re.IGNORECASE)
+	m = colre.match(line)
+	if not m:
+		return no_match
+	line += " " + m.group(2)
+	return (True, line)
+
 # End conversions for LyX 2.3 to 2.4
 ####################################
 
@@ -499,5 +513,6 @@ conversions = [
 	[ 31, []],
 	[ 32, []],
 	[ 33, []],
-	[ 34, [rename_cyrillic_kmap_files]]
+	[ 34, [rename_cyrillic_kmap_files]],
+	[ 35, [add_dark_color]]
 ]

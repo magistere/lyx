@@ -940,6 +940,8 @@ set(Lyx_Boost_Libraries)
 add_definitions(-DBOOST_USER_CONFIG=<config.h>)
 include_directories(${TOP_SRC_DIR}/3rdparty/boost)
 
+include_directories(${TOP_SRC_DIR}/3rdparty/nod)
+
 if(WIN32)
 	if(LYX_CONSOLE)
 		set(LYX_QTMAIN_LIBRARY)
@@ -1065,6 +1067,13 @@ if(MSVC)
 		set(CMAKE_CXX_FLAGS_DEBUG      "${CMAKE_CXX_FLAGS_DEBUG} /Zc:wchar_t-")
 		set(CMAKE_CXX_FLAGS_RELEASE    "${CMAKE_CXX_FLAGS_RELEASE} /Zc:wchar_t-")
 		set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /Zc:wchar_t-")
+	endif()
+
+	if (MSVC_VERSION GREATER_EQUAL 1914)
+		# Ensure the __cplusplus macro is set to a sensible value.
+		set(CMAKE_CXX_FLAGS_DEBUG      "${CMAKE_CXX_FLAGS_DEBUG} /Zc:__cplusplus")
+		set(CMAKE_CXX_FLAGS_RELEASE    "${CMAKE_CXX_FLAGS_RELEASE} /Zc:__cplusplus")
+		set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /Zc:__cplusplus")
 	endif()
 
 	message(STATUS "----- Warning level      : ${CMAKE_CXX_WARNING_LEVEL}  ${WARNING_LEVEL_MESSAGE}")

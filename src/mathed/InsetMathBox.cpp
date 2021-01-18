@@ -42,7 +42,7 @@ InsetMathBox::InsetMathBox(Buffer * buf, docstring const & name)
 {}
 
 
-void InsetMathBox::write(WriteStream & os) const
+void InsetMathBox::write(TeXMathStream & os) const
 {
 	ModeSpecifier specifier(os, TEXT_MODE);
 	os << '\\' << name_ << '{' << cell(0) << '}';
@@ -57,7 +57,7 @@ void InsetMathBox::normalize(NormalStream & os) const
 }
 
 
-void InsetMathBox::mathmlize(MathStream & ms) const
+void InsetMathBox::mathmlize(MathMLStream & ms) const
 {
 	// FIXME XHTML
 	// Need to do something special for tags here.
@@ -150,7 +150,7 @@ void InsetMathFBox::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathFBox::write(WriteStream & os) const
+void InsetMathFBox::write(TeXMathStream & os) const
 {
 	ModeSpecifier specifier(os, TEXT_MODE);
 	os << "\\fbox{" << cell(0) << '}';
@@ -163,7 +163,7 @@ void InsetMathFBox::normalize(NormalStream & os) const
 }
 
 
-void InsetMathFBox::mathmlize(MathStream & ms) const
+void InsetMathFBox::mathmlize(MathMLStream & ms) const
 {
 	SetMode textmode(ms, true);
 	ms << MTag("mstyle", "class='fbox'")
@@ -279,7 +279,7 @@ void InsetMathMakebox::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathMakebox::write(WriteStream & os) const
+void InsetMathMakebox::write(TeXMathStream & os) const
 {
 	ModeSpecifier specifier(os, TEXT_MODE);
 	os << (framebox_ ? "\\framebox" : "\\makebox");
@@ -307,7 +307,7 @@ void InsetMathMakebox::infoize(odocstream & os) const
 }
 
 
-void InsetMathMakebox::mathmlize(MathStream & ms) const
+void InsetMathMakebox::mathmlize(MathMLStream & ms) const
 {
 	// FIXME We could do something with the other arguments.
 	std::string const cssclass = framebox_ ? "framebox" : "makebox";
@@ -372,7 +372,7 @@ void InsetMathBoxed::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathBoxed::write(WriteStream & os) const
+void InsetMathBoxed::write(TeXMathStream & os) const
 {
 	ModeSpecifier specifier(os, MATH_MODE);
 	os << "\\boxed{" << cell(0) << '}';
@@ -391,7 +391,7 @@ void InsetMathBoxed::infoize(odocstream & os) const
 }
 
 
-void InsetMathBoxed::mathmlize(MathStream & ms) const
+void InsetMathBoxed::mathmlize(MathMLStream & ms) const
 {
 	ms << MTag("mstyle", "class='boxed'")
 	   << cell(0)

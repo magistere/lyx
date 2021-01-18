@@ -71,6 +71,7 @@
 #include "Buffer.h"
 #include "BufferParams.h"
 #include "Encoding.h"
+#include "FontInfo.h"
 #include "LyX.h" // use_gui
 
 #include <iomanip>
@@ -379,7 +380,7 @@ void initMath()
 }
 
 
-bool ensureMath(WriteStream & os, bool needs_mathmode, bool macro,
+bool ensureMath(TeXMathStream & os, bool needs_mathmode, bool macro,
                 bool textmode_macro)
 {
 	bool brace = os.pendingBrace();
@@ -419,8 +420,8 @@ bool ensureMath(WriteStream & os, bool needs_mathmode, bool macro,
 }
 
 
-int ensureMode(WriteStream & os, InsetMath::mode_type mode,
-		bool locked, bool ascii)
+int ensureMode(TeXMathStream & os, InsetMath::mode_type mode,
+               bool locked, bool ascii)
 {
 	bool textmode = mode == InsetMath::TEXT_MODE;
 	if (os.latex() && textmode && os.pendingBrace()) {
@@ -623,6 +624,8 @@ MathAtom createInsetMath(docstring const & s, Buffer * buf)
 		return MathAtom(new InsetMathFrac(buf, InsetMathFrac::CFRACLEFT));
 	if (s == "cfracright")
 		return MathAtom(new InsetMathFrac(buf, InsetMathFrac::CFRACRIGHT));
+	if (s == "case") // TODO: only if class is aastex(6|62)
+		return MathAtom(new InsetMathFrac(buf, InsetMathFrac::AASTEX_CASE));
 	//if (s == "infer")
 	//	return MathAtom(new MathInferInset);
 	if (s == "atop")

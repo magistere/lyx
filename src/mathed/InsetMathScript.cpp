@@ -253,6 +253,23 @@ int InsetMathScript::nker(BufferView const * bv) const
 }
 
 
+Limits InsetMathScript::limits() const
+{
+	if (nuc().empty())
+		return AUTO_LIMITS;
+	else
+		// only the limits status of the last element counts
+		return nuc().back()->limits();
+}
+
+
+void InsetMathScript::limits(Limits lim)
+{
+	if (!nuc().empty())
+		nuc().back()->limits(lim);
+}
+
+
 MathClass InsetMathScript::mathClass() const
 {
 	// FIXME: this is a hack, since the class will not be correct if
@@ -370,13 +387,12 @@ void InsetMathScript::drawT(TextPainter & pain, int x, int y) const
 
 bool InsetMathScript::hasLimits(FontInfo const & font) const
 {
-	if (font.style() != DISPLAY_STYLE)
-		return false;
 	if (nuc().empty())
 		return false;
 
 	Limits const lim = nuc().back()->limits() == AUTO_LIMITS
-		? nuc().back()->defaultLimits() : nuc().back()->limits();
+		? nuc().back()->defaultLimits(font.style() == DISPLAY_STYLE)
+		: nuc().back()->limits();
 	LASSERT(lim != AUTO_LIMITS, return false);
 	return lim == LIMITS;
 }
@@ -489,7 +505,7 @@ bool InsetMathScript::idxUpDown(Cursor & cur, bool up) const
 }
 
 
-void InsetMathScript::write(WriteStream & os) const
+void InsetMathScript::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 
@@ -578,11 +594,11 @@ void InsetMathScript::mathematica(MathematicaStream & os) const
 }
 
 
-void InsetMathScript::mathmlize(MathStream & ms) const
+void InsetMathScript::mathmlize(MathMLStream & ms) const
 {
 	bool d = hasDown() && !down().empty();
 	bool u = hasUp() && !up().empty();
-	// FIXME: the MathStream should be able to give us this information
+	// FIXME: the MathMLStream should be able to give us this information
 	bool l = has_limits_;
 
 	if (u && d)

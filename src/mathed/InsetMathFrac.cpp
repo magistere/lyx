@@ -140,6 +140,7 @@ MathClass InsetMathFrac::mathClass() const
 	case CFRAC:
 	case CFRACLEFT:
 	case CFRACRIGHT:
+	case AASTEX_CASE:
 		mc = MC_INNER;
 		break;
 	case NICEFRAC:
@@ -239,7 +240,8 @@ void InsetMathFrac::metrics(MetricsInfo & mi, Dimension & dim) const
 	case DFRAC:
 	case TFRAC:
 	case OVER:
-	case ATOP: {
+	case ATOP:
+	case AASTEX_CASE: {
 		int const dy = axis_height(mi.base);
 		Changer dummy =
 			// \tfrac is always in text size
@@ -248,7 +250,8 @@ void InsetMathFrac::metrics(MetricsInfo & mi, Dimension & dim) const
 			(kind_ == CFRAC
 			 || kind_ == CFRACLEFT
 			 || kind_ == CFRACRIGHT
-			 || kind_ == DFRAC) ? mi.base.font.changeStyle(DISPLAY_STYLE) :
+			 || kind_ == DFRAC
+			 || kind_ == AASTEX_CASE) ? mi.base.font.changeStyle(DISPLAY_STYLE) :
 			// all others
 			                      mi.base.changeFrac();
 		Changer dummy2 = mi.base.changeEnsureMath();
@@ -321,7 +324,8 @@ void InsetMathFrac::draw(PainterInfo & pi, int x, int y) const
 	case DFRAC:
 	case TFRAC:
 	case OVER:
-	case ATOP: {
+	case ATOP:
+	case AASTEX_CASE: {
 		int const dy = axis_height(pi.base);
 		Changer dummy =
 			// \tfrac is always in text size
@@ -330,7 +334,8 @@ void InsetMathFrac::draw(PainterInfo & pi, int x, int y) const
 			(kind_ == CFRAC
 			 || kind_ == CFRACLEFT
 			 || kind_ == CFRACRIGHT
-			 || kind_ == DFRAC) ? pi.base.font.changeStyle(DISPLAY_STYLE) :
+			 || kind_ == DFRAC
+			 || kind_ == AASTEX_CASE) ? pi.base.font.changeStyle(DISPLAY_STYLE) :
 			// all others
 			                      pi.base.changeFrac();
 		Dimension const dim1 = cell(1).dimension(*pi.base.bv);
@@ -386,7 +391,7 @@ void InsetMathFrac::drawT(TextPainter & /*pain*/, int /*x*/, int /*y*/) const
 }
 
 
-void InsetMathFrac::write(WriteStream & os) const
+void InsetMathFrac::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	switch (kind_) {
@@ -422,6 +427,9 @@ void InsetMathFrac::write(WriteStream & os) const
 	case CFRACRIGHT:
 		os << "\\cfrac[r]{" << cell(0) << "}{" << cell(1) << '}';
 		break;
+	case AASTEX_CASE:
+		os << "\\case{" << cell(0) << "}{" << cell(1) << '}';
+		break;
 	}
 }
 
@@ -449,9 +457,11 @@ docstring InsetMathFrac::name() const
 		return from_ascii("unit");
 	case ATOP:
 		return from_ascii("atop");
+	case AASTEX_CASE:
+		return from_ascii("case");
+	default:
+		return docstring();
 	}
-	// shut up stupid compiler
-	return docstring();
 }
 
 
@@ -491,7 +501,7 @@ void InsetMathFrac::octave(OctaveStream & os) const
 }
 
 
-void InsetMathFrac::mathmlize(MathStream & ms) const
+void InsetMathFrac::mathmlize(MathMLStream & ms) const
 {
 	switch (kind_) {
 	case ATOP:
@@ -509,6 +519,7 @@ void InsetMathFrac::mathmlize(MathStream & ms) const
 	case CFRAC:
 	case CFRACLEFT:
 	case CFRACRIGHT:
+	case AASTEX_CASE:
 		ms << MTag("mfrac")
 		   << MTag("mrow") << cell(0) << ETag("mrow")
 		   << MTag("mrow") << cell(1) << ETag("mrow")
@@ -565,6 +576,7 @@ void InsetMathFrac::htmlize(HtmlStream & os) const
 	case CFRAC:
 	case CFRACLEFT:
 	case CFRACRIGHT:
+	case AASTEX_CASE:
 		os << MTag("span", "class='frac'")
 			 << MTag("span", "class='numer'") << cell(0) << ETag("span")
 			 << MTag("span", "class='denom'") << cell(1) << ETag("span")
@@ -604,12 +616,16 @@ void InsetMathFrac::validate(LaTeXFeatures & features) const
 	if (kind_ == CFRAC || kind_ == CFRACLEFT || kind_ == CFRACRIGHT
 		  || kind_ == DFRAC || kind_ == TFRAC)
 		features.require("amsmath");
+	if (kind_ == AASTEX_CASE)
+		features.require("aastex_case");
+
 	if (features.runparams().math_flavor == OutputParams::MathAsHTML)
 		// CSS adapted from eLyXer
 		features.addCSSSnippet(
 			"span.frac{display: inline-block; vertical-align: middle; text-align:center;}\n"
 			"span.numer{display: block;}\n"
 			"span.denom{display: block; border-top: thin solid #000040;}");
+
 	InsetMathNest::validate(features);
 }
 
@@ -698,7 +714,7 @@ bool InsetMathBinom::extraBraces() const
 }
 
 
-void InsetMathBinom::write(WriteStream & os) const
+void InsetMathBinom::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	switch (kind_) {
@@ -730,7 +746,7 @@ void InsetMathBinom::normalize(NormalStream & os) const
 }
 
 
-void InsetMathBinom::mathmlize(MathStream & ms) const
+void InsetMathBinom::mathmlize(MathMLStream & ms) const
 {
 	char ldelim = ' ';
 	char rdelim = ' ';

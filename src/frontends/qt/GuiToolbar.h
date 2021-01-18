@@ -148,6 +148,8 @@ public:
 	void update(int context = 0);
 
 	///
+	void setState(std::string const state);
+	///
 	void toggle();
 
 	/// toggles movability
@@ -158,8 +160,8 @@ public:
 
 	///
 	Action * addItem(ToolbarItem const & item);
-    ///
-    GuiView const & owner() { return owner_; }
+	///
+	GuiView const & owner() { return owner_; }
 
 Q_SIGNALS:
 	///

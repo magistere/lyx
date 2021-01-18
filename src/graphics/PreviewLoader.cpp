@@ -180,7 +180,7 @@ public:
 	void refreshPreviews();
 
 	/// Emit this signal when an image is ready for display.
-	signals2::signal<void(PreviewImage const &)> imageReady;
+	signal<void(PreviewImage const &)> imageReady;
 
 	Buffer const & buffer() const { return buffer_; }
 
@@ -226,8 +226,6 @@ private:
 	///
 	QTimer * delay_refresh_;
 	///
-	Trackable trackable_;
-	///
 	bool finished_generating_;
 
 	/// We don't own this
@@ -244,14 +242,8 @@ lyx::Converter const * PreviewLoader::Impl::pconverter_;
 //
 
 PreviewLoader::PreviewLoader(Buffer const & b)
-	: pimpl_(new Impl(*this, b))
+	: pimpl_(make_shared<Impl>(*this, b))
 {}
-
-
-PreviewLoader::~PreviewLoader()
-{
-	delete pimpl_;
-}
 
 
 PreviewImage const * PreviewLoader::preview(string const & latex_snippet) const
@@ -290,7 +282,7 @@ void PreviewLoader::refreshPreviews()
 }
 
 
-signals2::connection PreviewLoader::connect(slot const & slot) const
+connection PreviewLoader::connect(slot const & slot) const
 {
 	return pimpl_->imageReady.connect(slot);
 }
@@ -380,8 +372,8 @@ PreviewLoader::Impl::Impl(PreviewLoader & p, Buffer const & b)
 {
 	font_scaling_factor_ = int(buffer_.fontScalingFactor());
 	if (theApp()) {
-		fg_color_ = convert(theApp()->hexName(foregroundColor()).c_str(), 16);
-		bg_color_ = convert(theApp()->hexName(backgroundColor()).c_str(), 16);
+		fg_color_ = convert(theApp()->hexName(foregroundColor()), 16);
+		bg_color_ = convert(theApp()->hexName(backgroundColor()), 16);
 	} else {
 		fg_color_ = 0x0;
 		bg_color_ = 0xffffff;
@@ -444,8 +436,8 @@ PreviewLoader::Impl::preview(string const & latex_snippet) const
 	int fg = 0x0;
 	int bg = 0xffffff;
 	if (theApp()) {
-		fg = convert(theApp()->hexName(foregroundColor()).c_str(), 16);
-		bg = convert(theApp()->hexName(backgroundColor()).c_str(), 16);
+		fg = convert(theApp()->hexName(foregroundColor()), 16);
+		bg = convert(theApp()->hexName(backgroundColor()), 16);
 	}
 	if (font_scaling_factor_ != fs || fg_color_ != fg || bg_color_ != bg) {
 		// Schedule refresh of all previews on zoom or color changes.
@@ -721,9 +713,12 @@ void PreviewLoader::Impl::startLoading(bool wait)
 
 	// Initiate the conversion from LaTeX to bitmap images files.
 	ForkedCall::sigPtr convert_ptr = make_shared<ForkedCall::sig>();
-	convert_ptr->connect(ForkedProcess::slot([this](pid_t pid, int retval){
-				finishedGenerating(pid, retval);
-			}).track_foreign(trackable_.p()));
+	weak_ptr<PreviewLoader::Impl> this_ = parent_.pimpl_;
+	convert_ptr->connect([this_](pid_t pid, int retval){
+			if (auto p = this_.lock()) {
+				p->finishedGenerating(pid, retval);
+			}
+		});
 
 	ForkedCall call(buffer_.filePath());
 	int ret = call.startScript(command, convert_ptr);
@@ -824,11 +819,11 @@ void PreviewLoader::Impl::dumpPreamble(otexstream & os, Flavor flavor) const
 	buffer_.writeLaTeXSource(os, buffer_.filePath(), runparams, Buffer::OnlyPreamble);
 
 	// FIXME! This is a HACK! The proper fix is to control the 'true'
-	// passed to WriteStream below:
+	// passed to TeXMathStream below:
 	// int InsetMathNest::latex(Buffer const &, odocstream & os,
 	//                          OutputParams const & runparams) const
 	// {
-	//	WriteStream wi(os, runparams.moving_arg, true);
+	//	TeXMathStream wi(os, runparams.moving_arg, true);
 	//	par_->write(wi);
 	//	return wi.line();
 	// }

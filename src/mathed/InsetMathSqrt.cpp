@@ -69,7 +69,7 @@ void InsetMathSqrt::drawT(TextPainter & /*pain*/, int /*x*/, int /*y*/) const
 }
 
 
-void InsetMathSqrt::write(WriteStream & os) const
+void InsetMathSqrt::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "\\sqrt{" << cell(0) << '}';
@@ -98,7 +98,7 @@ void InsetMathSqrt::octave(OctaveStream & os) const
 }
 
 
-void InsetMathSqrt::mathmlize(MathStream & ms) const
+void InsetMathSqrt::mathmlize(MathMLStream & ms) const
 {
 	ms << MTag("msqrt") << cell(0) << ETag("msqrt");
 }

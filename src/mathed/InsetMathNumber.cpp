@@ -68,7 +68,7 @@ void InsetMathNumber::octave(OctaveStream & os) const
 }
 
 
-void InsetMathNumber::mathmlize(MathStream & ms) const
+void InsetMathNumber::mathmlize(MathMLStream & ms) const
 {
 	ms << "<" << from_ascii(ms.namespacedTag("mn")) << ">"
 	   << str_
@@ -82,7 +82,7 @@ void InsetMathNumber::htmlize(HtmlStream & os) const
 }
 
 
-void InsetMathNumber::write(WriteStream & os) const
+void InsetMathNumber::write(TeXMathStream & os) const
 {
 	os << str_;
 }

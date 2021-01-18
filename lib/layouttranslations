@@ -775,11 +775,11 @@ Translation id
 	"List of Schemes" "Daftar Skema"
 	"List of Tableaux" "Daftar Tableaux"
 	"Listing" "Listing"
-	"Listings[[List of Listings]]" "Listings"
+	"Listings[[List of Listings]]" "Daftar"
 	"Nomenclature[[output]]" "Nomenklatur"
 	"Notation" "Notasi"
-	"Note" "Nota"
-	"Notes[[Endnotes]]" "Notes"
+	"Note" "Catatan"
+	"Notes[[Endnotes]]" "Catatan "
 	"Problem" "Masalah"
 	"Proof" "Pruf"
 	"Property" "Properti"
@@ -791,8 +791,8 @@ Translation id
 	"Summary" "Ringkasan"
 	"Tableau" "Tableau"
 	"Theorem" "Teorema"
-	"page[[nomencl]]" "page"
-	"see equation[[nomencl]]" "see equation"
+	"page[[nomencl]]" "halaman"
+	"see equation[[nomencl]]" "lihat persamaan"
 End
 
 Translation it

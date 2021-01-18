@@ -208,17 +208,17 @@ public:
 	virtual bool handlesMulticolumn() const { return false; }
 
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
-	void write(WriteStream & os,
-		   row_type beg_row, col_type beg_col,
-		   row_type end_row, col_type end_col) const;
+	void write(TeXMathStream & os,
+	           row_type beg_row, col_type beg_col,
+	           row_type end_row, col_type end_col) const;
 	///
 	void normalize(NormalStream &) const override;
 	///
 	//void maple(MapleStream &) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

@@ -334,7 +334,7 @@ bool InsetMathSideset::idxUpDown(Cursor & cur, bool up) const
 }
 
 
-void InsetMathSideset::write(WriteStream & os) const
+void InsetMathSideset::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 
@@ -385,7 +385,7 @@ void InsetMathSideset::normalize(NormalStream & os) const
 }
 
 
-void InsetMathSideset::mathmlize(MathStream & ms) const
+void InsetMathSideset::mathmlize(MathMLStream & ms) const
 {
 	// FIXME This is only accurate if both scriptl_ and scriptr_ are true
 	if (!scriptl_)

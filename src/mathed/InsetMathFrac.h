@@ -46,6 +46,7 @@ public:
 	///
 	enum Kind {
 		FRAC,
+		AASTEX_CASE,
 		CFRAC,
 		CFRACLEFT,
 		CFRACRIGHT,
@@ -82,7 +83,7 @@ public:
 	///
 	bool extraBraces() const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void maple(MapleStream &) const override;
 	///
@@ -90,7 +91,7 @@ public:
 	///
 	void octave(OctaveStream &) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///
@@ -121,7 +122,7 @@ public:
 	///
 	explicit InsetMathBinom(Buffer * buf, Kind kind = BINOM);
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void normalize(NormalStream &) const override;
 	/// Generalized fractions are of inner class (see The TeXbook, p.292)
@@ -133,7 +134,7 @@ public:
 	///
 	bool extraBraces() const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

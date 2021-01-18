@@ -31,7 +31,7 @@ class MathData;
 // LaTeX/LyX
 //
 
-class WriteStream {
+class TeXMathStream {
 public:
 	///
 	enum OutputType {
@@ -46,11 +46,11 @@ public:
 		STRIKEOUT
 	};
 	///
-	explicit WriteStream(otexrowstream & os, bool fragile = false,
-	                     bool latex = false, OutputType output = wsDefault,
-	                     Encoding const * encoding = nullptr);
+	explicit TeXMathStream(otexrowstream & os, bool fragile = false,
+	                       bool latex = false, OutputType output = wsDefault,
+	                       Encoding const * encoding = nullptr);
 	///
-	~WriteStream();
+	~TeXMathStream();
 	///
 	int line() const { return line_; }
 	///
@@ -80,9 +80,13 @@ public:
 	/// tell which ulem command type we are inside
 	UlemCmdType ulemCmd() const { return ulemcmd_; }
 	/// writes space if next thing is isalpha()
-	void pendingSpace(bool how);
+	void pendingSpace(bool space);
 	/// writes space if next thing is isalpha()
 	bool pendingSpace() const { return pendingspace_; }
+	/// write braces if a space is pending and next char is [
+	void useBraces(bool braces);
+	/// write braces if a space is pending and next char is [
+	bool useBraces() const { return usebraces_; }
 	/// tell whether to write the closing brace of \ensuremath
 	void pendingBrace(bool brace);
 	/// tell whether to write the closing brace of \ensuremath
@@ -124,6 +128,8 @@ private:
 	OutputType output_ = wsDefault;
 	/// do we have a space pending?
 	bool pendingspace_ = false;
+	/// do we have to write braces when a space is pending and [ follows?
+	bool usebraces_ = false;
 	/// do we have a brace pending?
 	bool pendingbrace_ = false;
 	/// are we in text mode when producing latex code?
@@ -149,26 +155,26 @@ private:
 };
 
 ///
-WriteStream & operator<<(WriteStream &, MathAtom const &);
+TeXMathStream & operator<<(TeXMathStream &, MathAtom const &);
 ///
-WriteStream & operator<<(WriteStream &, MathData const &);
+TeXMathStream & operator<<(TeXMathStream &, MathData const &);
 ///
-WriteStream & operator<<(WriteStream &, docstring const &);
+TeXMathStream & operator<<(TeXMathStream &, docstring const &);
 ///
-WriteStream & operator<<(WriteStream &, char const * const);
+TeXMathStream & operator<<(TeXMathStream &, char const * const);
 ///
-WriteStream & operator<<(WriteStream &, char);
+TeXMathStream & operator<<(TeXMathStream &, char);
 ///
-WriteStream & operator<<(WriteStream &, int);
+TeXMathStream & operator<<(TeXMathStream &, int);
 ///
-WriteStream & operator<<(WriteStream &, unsigned int);
+TeXMathStream & operator<<(TeXMathStream &, unsigned int);
 
 /// ensure correct mode, possibly by opening \ensuremath or \lyxmathsym
-bool ensureMath(WriteStream & os, bool needs_mathmode = true,
+bool ensureMath(TeXMathStream & os, bool needs_mathmode = true,
                 bool macro = false, bool textmode_macro = false);
 
 /// ensure the requested mode, possibly by closing \ensuremath or \lyxmathsym
-int ensureMode(WriteStream & os, InsetMath::mode_type mode, bool locked, bool ascii);
+int ensureMode(TeXMathStream & os, InsetMath::mode_type mode, bool locked, bool ascii);
 
 
 /**
@@ -222,14 +228,14 @@ class MathEnsurer
 {
 public:
 	///
-	explicit MathEnsurer(WriteStream & os, bool needs_mathmode = true,
+	explicit MathEnsurer(TeXMathStream & os, bool needs_mathmode = true,
 	                     bool macro = false, bool textmode_macro = false)
 		: os_(os), brace_(ensureMath(os, needs_mathmode, macro, textmode_macro)) {}
 	///
 	~MathEnsurer() { os_.pendingBrace(brace_); }
 private:
 	///
-	WriteStream & os_;
+	TeXMathStream & os_;
 	///
 	bool brace_;
 };
@@ -274,8 +280,8 @@ class ModeSpecifier
 {
 public:
 	///
-	explicit ModeSpecifier(WriteStream & os, InsetMath::mode_type mode,
-				bool locked = false, bool ascii = false)
+	explicit ModeSpecifier(TeXMathStream & os, InsetMath::mode_type mode,
+	                       bool locked = false, bool ascii = false)
 		: os_(os), oldmodes_(ensureMode(os, mode, locked, ascii)) {}
 	///
 	~ModeSpecifier()
@@ -286,7 +292,7 @@ public:
 	}
 private:
 	///
-	WriteStream & os_;
+	TeXMathStream & os_;
 	///
 	int oldmodes_;
 };
@@ -341,10 +347,10 @@ public:
 class MathExportException : public std::exception {};
 
 
-class MathStream {
+class MathMLStream {
 public:
 	/// Builds a stream proxy for os; the MathML namespace is given by xmlns (supposed to be already defined elsewhere in the document).
-	explicit MathStream(odocstream & os, std::string const & xmlns = "", bool xmlMode = false);
+	explicit MathMLStream(odocstream & os, std::string const & xmlns = "", bool xmlMode = false);
 	///
 	void cr();
 	///
@@ -354,7 +360,7 @@ public:
 	///
 	int & tab() { return tab_; }
 	///
-	friend MathStream & operator<<(MathStream &, char const *);
+	friend MathMLStream & operator<<(MathMLStream &, char const *);
 	///
 	void defer(docstring const &);
 	///
@@ -393,35 +399,35 @@ private:
 };
 
 ///
-MathStream & operator<<(MathStream &, MathAtom const &);
+MathMLStream & operator<<(MathMLStream &, MathAtom const &);
 ///
-MathStream & operator<<(MathStream &, MathData const &);
+MathMLStream & operator<<(MathMLStream &, MathData const &);
 ///
-MathStream & operator<<(MathStream &, docstring const &);
+MathMLStream & operator<<(MathMLStream &, docstring const &);
 ///
-MathStream & operator<<(MathStream &, char const *);
+MathMLStream & operator<<(MathMLStream &, char const *);
 ///
-MathStream & operator<<(MathStream &, char);
+MathMLStream & operator<<(MathMLStream &, char);
 ///
-MathStream & operator<<(MathStream &, char_type);
+MathMLStream & operator<<(MathMLStream &, char_type);
 ///
-MathStream & operator<<(MathStream &, MTag const &);
+MathMLStream & operator<<(MathMLStream &, MTag const &);
 ///
-MathStream & operator<<(MathStream &, ETag const &);
+MathMLStream & operator<<(MathMLStream &, ETag const &);
 ///
-MathStream & operator<<(MathStream &, CTag const &);
+MathMLStream & operator<<(MathMLStream &, CTag const &);
 
 
 /// A simpler version of ModeSpecifier, for MathML
 class SetMode {
 public:
 	///
-	explicit SetMode(MathStream & ms, bool text);
+	explicit SetMode(MathMLStream & ms, bool text);
 	///
 	~SetMode();
 private:
 	///
-	MathStream & ms_;
+	MathMLStream & ms_;
 	///
 	bool was_text_;
 };

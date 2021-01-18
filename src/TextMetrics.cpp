@@ -30,6 +30,7 @@
 #include "MetricsInfo.h"
 #include "ParagraphParameters.h"
 #include "RowPainter.h"
+#include "Session.h"
 #include "Text.h"
 #include "TextClass.h"
 #include "VSpace.h"
@@ -557,6 +558,29 @@ bool TextMetrics::redoParagraph(pit_type const pit, bool const align_rows)
 	if (row_index < pm.rows().size())
 		pm.rows().resize(row_index);
 
+	// This type of margin can only be handled at the global paragraph level
+	if (par.layout().margintype == MARGIN_RIGHT_ADDRESS_BOX) {
+		int offset = 0;
+		if (par.isRTL(buffer.params())) {
+			// globally align the paragraph to the left.
+			int minleft = max_width_;
+			for (Row const & row : pm.rows())
+				minleft = min(minleft, row.left_margin);
+			offset = right_margin - minleft;
+		} else {
+			// globally align the paragraph to the right.
+			int maxwid = 0;
+			for (Row const & row : pm.rows())
+				maxwid = max(maxwid, row.width());
+			offset = max_width_ - right_margin - maxwid;
+		}
+
+		for (Row & row : pm.rows()) {
+			row.left_margin += offset;
+			row.dim().wid += offset;
+		}
+	}
+
 	// The space above and below the paragraph.
 	int const top = parTopSpacing(pit);
 	pm.rows().front().dim().asc += top;
@@ -779,22 +803,6 @@ int TextMetrics::labelFill(Row const & row) const
 }
 
 
-#if 0
-// Not used, see TextMetrics::breakRow
-// this needs special handling - only newlines count as a break point
-static pos_type addressBreakPoint(pos_type i, Paragraph const & par)
-{
-	pos_type const end = par.size();
-
-	for (; i < end; ++i)
-		if (par.isNewline(i))
-			return i + 1;
-
-	return end;
-}
-#endif
-
-
 int TextMetrics::labelEnd(pit_type const pit) const
 {
 	// labelEnd is only needed if the layout fills a flushleft label.
@@ -870,6 +878,10 @@ bool TextMetrics::breakRow(Row & row, int const right_margin) const
 {
 	LATTEST(row.empty());
 	Paragraph const & par = text_->getPar(row.pit());
+	Buffer const & buf = text_->inset().buffer();
+	BookmarksSection::BookmarkPosList bpl =
+		theSession().bookmarks().bookmarksInPar(buf.fileName(), par.id());
+
 	pos_type const end = par.size();
 	pos_type const pos = row.pos();
 	pos_type const body_pos = par.beginOfBody();
@@ -886,14 +898,6 @@ bool TextMetrics::breakRow(Row & row, int const right_margin) const
 	// the width available for the row.
 	int const width = max_width_ - row.right_margin;
 
-#if 0
-	//FIXME: As long as leftMargin() is not correctly implemented for
-	// MARGIN_RIGHT_ADDRESS_BOX, we should also not do this here.
-	// Otherwise, long rows will be painted off the screen.
-	if (par.layout().margintype == MARGIN_RIGHT_ADDRESS_BOX)
-		return addressBreakPoint(pos, par);
-#endif
-
 	// check for possible inline completion
 	DocIterator const & ic_it = bv_->inlineCompletionPos();
 	pos_type ic_pos = -1;
@@ -904,7 +908,23 @@ bool TextMetrics::breakRow(Row & row, int const right_margin) const
 	// or the end of the par, then build a representation of the row.
 	pos_type i = pos;
 	FontIterator fi = FontIterator(*this, par, row.pit(), pos);
-	while (i < end && (i == pos || row.width() <= width)) {
+	// The real stopping condition is a few lines below.
+	while (true) {
+		// Firstly, check whether there is a bookmark here.
+		for (auto const & bp_p : bpl)
+			if (bp_p.second == i) {
+				Font f = *fi;
+				f.fontInfo().setColor(Color_bookmark);
+				// ❶ U+2776 DINGBAT NEGATIVE CIRCLED DIGIT ONE
+				char_type const ch = 0x2775 + bp_p.first;
+				row.addVirtual(i, docstring(1, ch), f, Change());
+			}
+
+		// The stopping condition is here so that the display of a
+		// bookmark can take place at paragraph start too.
+		if (i >= end || (i != pos && row.width() > width))
+			break;
+
 		char_type c = par.getChar(i);
 		// The most special cases are handled first.
 		if (par.isInset(i)) {
@@ -998,9 +1018,7 @@ bool TextMetrics::breakRow(Row & row, int const right_margin) const
 		// in the paragraph.
 		Font f(text_->layoutFont(row.pit()));
 		f.fontInfo().setColor(Color_paragraphmarker);
-		BufferParams const & bparams
-			= text_->inset().buffer().params();
-		f.setLanguage(par.getParLanguage(bparams));
+		f.setLanguage(par.getParLanguage(buf.params()));
 		// ¶ U+00B6 PILCROW SIGN
 		row.addVirtual(end, docstring(1, char_type(0x00B6)), f, change);
 	}
@@ -1598,7 +1616,8 @@ void TextMetrics::deleteLineForward(Cursor & cur)
 
 int TextMetrics::leftMargin(pit_type pit) const
 {
-	return leftMargin(pit, text_->paragraphs()[pit].size());
+	// the + 1 is useful when the paragraph is empty
+	return leftMargin(pit, text_->paragraphs()[pit].size() + 1);
 }
 
 
@@ -1610,7 +1629,10 @@ int TextMetrics::leftMargin(pit_type const pit, pos_type const pos) const
 	LASSERT(pit < int(pars.size()), return 0);
 	Paragraph const & par = pars[pit];
 	LASSERT(pos >= 0, return 0);
-	LASSERT(pos <= par.size(), return 0);
+	// We do not really care whether pos > par.size(), since we do not
+	// access the data. It can be actially useful, when querying the
+	// margin without indentation (see leftMargin(pit_type).
+
 	Buffer const & buffer = bv_->buffer();
 	//lyxerr << "TextMetrics::leftMargin: pit: " << pit << " pos: " << pos << endl;
 	DocumentClass const & tclass = buffer.params().documentClass();
@@ -1725,24 +1747,9 @@ int TextMetrics::leftMargin(pit_type const pit, pos_type const pos) const
 		}
 		break;
 
-	case MARGIN_RIGHT_ADDRESS_BOX: {
-#if 0
-		// The left margin depends on the widest row in this paragraph.
-		// This code is wrong because it depends on the rows, but at the
-		// same time this function is used in redoParagraph to construct
-		// the rows.
-		ParagraphMetrics const & pm = par_metrics_[pit];
-		int minfill = max_width_;
-		for (row : pm.rows())
-			if (row.fill() < minfill)
-				minfill = row.fill();
-		l_margin += bfm.signedWidth(layout.leftmargin);
-		l_margin += minfill;
-#endif
-		// also wrong, but much shorter.
-		l_margin += max_width_ / 2;
+	case MARGIN_RIGHT_ADDRESS_BOX:
+		// This is handled globally in redoParagraph().
 		break;
-	}
 	}
 
 	if (!par.params().leftIndent().zero())
@@ -1764,8 +1771,8 @@ int TextMetrics::leftMargin(pit_type const pit, pos_type const pos) const
 	    && !text_->inset().neverIndent()
 	    // display style insets do not need indentation
 	    && !(!par.empty()
-	         && par.isInset(pos)
-	         && par.getInset(pos)->rowFlags() & Inset::Display)
+	         && par.isInset(0)
+	         && par.getInset(0)->rowFlags() & Inset::Display)
 	    && (!(tclass.isDefaultLayout(par.layout())
 	        || tclass.isPlainLayout(par.layout()))
 	        || buffer.params().paragraph_separation

@@ -122,7 +122,7 @@ void InsetMathStackrel::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathStackrel::write(WriteStream & os) const
+void InsetMathStackrel::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "\\stackrel";
@@ -141,7 +141,7 @@ void InsetMathStackrel::normalize(NormalStream & os) const
 }
 
 
-void InsetMathStackrel::mathmlize(MathStream & ms) const
+void InsetMathStackrel::mathmlize(MathMLStream & ms) const
 {
 	if (nargs() > 2)
 		ms << "<" << from_ascii(ms.namespacedTag("munderover")) << ">"

@@ -181,6 +181,8 @@ docstring const token(docstring const & a, char_type delim, int n);
 int tokenPos(std::string const & a, char delim, std::string const & tok);
 int tokenPos(docstring const & a, char_type delim, docstring const & tok);
 
+///
+docstring capitalize(docstring const & s);
 
 /// Substitute all \a oldchar with \a newchar
 std::string const subst(std::string const & a, char oldchar, char newchar);
@@ -201,6 +203,9 @@ int count_char(std::string const & str, char chr);
 
 /// Count all occurrences of char \a chr inside \a str
 int count_char(docstring const & str, docstring::value_type chr);
+
+/// get an approximate word count
+int wordCount(docstring const &);
 
 /** Count all occurrences of binary chars inside \a str.
     It is assumed that \a str is utf-8 encoded and that a binary char

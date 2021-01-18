@@ -270,8 +270,8 @@ AC_REQUIRE([AC_PROG_CXXCPP])
 
 ### We might want to force the C++ standard.
 AC_ARG_ENABLE(cxx-mode,
-  AS_HELP_STRING([--enable-cxx-mode],[choose C++ standard (default: 14, then 11)]),,
-  [enable_cxx_mode={14,11}]
+  AS_HELP_STRING([--enable-cxx-mode],[choose C++ standard (default: 17, 14, then 11)]),,
+  [enable_cxx_mode={17,14,11}]
 )
 
 AC_LANG_PUSH(C++)
@@ -386,7 +386,7 @@ if test x$GXX = xyes; then
       AC_LANG_POP(C++)
     fi
   case $gxx_version in
-      2.*|3.*|4.@<:@0-8@:>@) AC_MSG_ERROR([gcc >= 4.9 is required]);;
+      2.*|3.*|4.@<:@0-8@:>@*) AC_MSG_ERROR([gcc >= 4.9 is required]);;
   esac
   if test x$enable_stdlib_debug = xyes ; then
     dnl FIXME: for clang/libc++, one should define _LIBCPP_DEBUG2=0
@@ -416,6 +416,34 @@ if test x$GXX = xyes; then
 fi
 ])
 
+dnl Usage: LYX_USE_INCLUDED_NOD : select if the included nod should be used.
+AC_DEFUN([LYX_USE_INCLUDED_NOD],[
+	AC_MSG_CHECKING([whether to use included nod library])
+	AC_ARG_WITH(included-nod,
+	    [AS_HELP_STRING([--without-included-nod], [do not use the nod lib supplied with LyX, try to find one in the system directories - compilation will abort if nothing suitable is found])],
+	    [lyx_cv_with_included_nod=$withval],
+	    [lyx_cv_with_included_nod=yes])
+	AM_CONDITIONAL(USE_INCLUDED_NOD, test x$lyx_cv_with_included_nod = xyes)
+	AC_MSG_RESULT([$lyx_cv_with_included_nod])
+	if test x$lyx_cv_with_included_nod = xyes ; then
+	    lyx_included_libs="$lyx_included_libs nod"
+	    NOD_INCLUDES='-I$(top_srcdir)/3rdparty/nod'
+	else
+	    NOD_INCLUDES=
+	    AC_LANG_PUSH(C++)
+	    AC_MSG_CHECKING([for nod library])
+	    AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([#include <nod.hpp>],
+		    [nod::scoped_connection conn;])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no])
+		AC_MSG_ERROR([cannot find suitable nod library (do not use --without-included-nod)])
+	    ])
+	    AC_LANG_POP(C++)
+	fi
+	AC_SUBST(NOD_INCLUDES)
+])
+
 dnl Usage: LYX_USE_INCLUDED_BOOST : select if the included boost should
 dnl        be used.
 AC_DEFUN([LYX_USE_INCLUDED_BOOST],[
@@ -426,6 +454,18 @@ AC_DEFUN([LYX_USE_INCLUDED_BOOST],[
 	    [lyx_cv_with_included_boost=no])
 	AM_CONDITIONAL(USE_INCLUDED_BOOST, test x$lyx_cv_with_included_boost = xyes)
 	AC_MSG_RESULT([$lyx_cv_with_included_boost])
+	if test x$lyx_cv_with_included_boost = xno ; then
+	    AC_LANG_PUSH(C++)
+	    AC_MSG_CHECKING([for boost library])
+	    AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([#include <boost/crc.hpp>],
+		    [boost::crc_32_type crc;])],
+		[AC_MSG_RESULT([yes])],
+		[AC_MSG_RESULT([no])
+		lyx_cv_with_included_boost=yes
+	    ])
+	    AC_LANG_POP(C++)
+	fi
 	if test x$lyx_cv_with_included_boost = xyes ; then
 	    lyx_included_libs="$lyx_included_libs boost"
 	    BOOST_INCLUDES='-I$(top_srcdir)/3rdparty/boost'

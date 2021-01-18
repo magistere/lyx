@@ -491,7 +491,7 @@ public:
 				   Buffer::ExportStatus (*asyncFunc)(Buffer const *, Buffer *, string const &),
 				   Buffer::ExportStatus (Buffer::*syncFunc)(string const &, bool) const,
 				   Buffer::ExportStatus (Buffer::*previewFunc)(string const &) const,
-				   bool allow_async);
+				   bool allow_async, bool use_tmpdir = false);
 
 	QVector<GuiWorkArea*> guiWorkAreas();
 
@@ -2117,6 +2117,41 @@ bool GuiView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
 		flag.setOnOff(devel_mode_);
 		break;
 
+	case LFUN_TOOLBAR_SET: {
+		string const name = cmd.getArg(0);
+		string const state = cmd.getArg(1);
+		if (name.empty() || state.empty()) {
+			enable = false;
+			docstring const msg =
+				_("Function toolbar-set requires two arguments!");
+			flag.message(msg);
+			break;
+		}
+		if (state != "on" && state != "off" && state != "auto") {
+			enable = false;
+			docstring const msg =
+				bformat(_("Invalid argument \"%1$s\" to function toolbar-set!"),
+					from_utf8(state));
+			flag.message(msg);
+			break;
+		}
+		if (GuiToolbar * t = toolbar(name)) {
+			bool const autovis = t->visibility() & Toolbars::AUTO;
+			if (state == "on")
+				flag.setOnOff(t->isVisible() && !autovis);
+			else if (state == "off")
+				flag.setOnOff(!t->isVisible() && !autovis);
+			else if (state == "auto")
+				flag.setOnOff(autovis);
+		} else {
+			enable = false;
+			docstring const msg =
+				bformat(_("Unknown toolbar \"%1$s\""), from_utf8(name));
+			flag.message(msg);
+		}
+		break;
+	}
+
 	case LFUN_TOOLBAR_TOGGLE: {
 		string const name = cmd.getArg(0);
 		if (GuiToolbar * t = toolbar(name))
@@ -2193,7 +2228,6 @@ bool GuiView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
 			enable = FileName(doc_buffer->logName()).isReadableFile();
 		else if (name == "spellchecker")
 			enable = theSpellChecker()
-				&& !doc_buffer->isReadonly()
 				&& !doc_buffer->text().empty();
 		else if (name == "vclog")
 			enable = doc_buffer->lyxvc().inUse();
@@ -2682,11 +2716,11 @@ void GuiView::newDocument(string const & filename, string templatefile,
 }
 
 
-void GuiView::insertLyXFile(docstring const & fname, bool ignorelang)
+bool GuiView::insertLyXFile(docstring const & fname, bool ignorelang)
 {
 	BufferView * bv = documentBufferView();
 	if (!bv)
-		return;
+		return false;
 
 	// FIXME UNICODE
 	FileName filename(to_utf8(fname));
@@ -2708,7 +2742,7 @@ void GuiView::insertLyXFile(docstring const & fname, bool ignorelang)
 					 QStringList(qt_("LyX Documents (*.lyx)")));
 
 		if (result.first == FileDialog::Later)
-			return;
+			return false;
 
 		// FIXME UNICODE
 		filename.set(fromqstr(result.second));
@@ -2717,12 +2751,13 @@ void GuiView::insertLyXFile(docstring const & fname, bool ignorelang)
 		if (filename.empty()) {
 			// emit message signal.
 			message(_("Canceled."));
-			return;
+			return false;
 		}
 	}
 
 	bv->insertLyXFile(filename, ignorelang);
 	bv->buffer().errors("Parse");
+	return true;
 }
 
 
@@ -3263,9 +3298,10 @@ bool GuiView::closeBuffer(Buffer & buf)
 	if (success) {
 		// goto bookmark to update bookmark pit.
 		// FIXME: we should update only the bookmarks related to this buffer!
+		// FIXME: this is done also in LFUN_WINDOW_CLOSE!
 		LYXERR(Debug::DEBUG, "GuiView::closeBuffer()");
-		for (unsigned int i = 0; i < theSession().bookmarks().size(); ++i)
-			guiApp->gotoBookmark(i + 1, false, false);
+		for (unsigned int i = 1; i < theSession().bookmarks().size(); ++i)
+			guiApp->gotoBookmark(i, false, false);
 
 		if (saveBufferIfNeeded(buf, false)) {
 			buf.removeAutosaveFile();
@@ -3811,14 +3847,13 @@ Buffer::ExportStatus GuiView::GuiViewPrivate::previewAndDestroy(
 }
 
 
-bool GuiView::GuiViewPrivate::asyncBufferProcessing(
-			   string const & argument,
+bool GuiView::GuiViewPrivate::asyncBufferProcessing(string const & argument,
 			   Buffer const * used_buffer,
 			   docstring const & msg,
 			   Buffer::ExportStatus (*asyncFunc)(Buffer const *, Buffer *, string const &),
 			   Buffer::ExportStatus (Buffer::*syncFunc)(string const &, bool) const,
 			   Buffer::ExportStatus (Buffer::*previewFunc)(string const &) const,
-			   bool allow_async)
+			   bool allow_async, bool use_tmpdir)
 {
 	if (!used_buffer)
 		return false;
@@ -3854,7 +3889,7 @@ bool GuiView::GuiViewPrivate::asyncBufferProcessing(
 	} else {
 		Buffer::ExportStatus status;
 		if (syncFunc) {
-			status = (used_buffer->*syncFunc)(format, false);
+			status = (used_buffer->*syncFunc)(format, use_tmpdir);
 		} else if (previewFunc) {
 			status = (used_buffer->*previewFunc)(format);
 		} else
@@ -4011,7 +4046,7 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 						_("Exporting ..."),
 						&GuiViewPrivate::compileAndDestroy,
 						&Buffer::doExport,
-						nullptr, cmd.allowAsync());
+						nullptr, cmd.allowAsync(), true);
 			break;
 		}
 		case LFUN_BUFFER_VIEW: {
@@ -4029,7 +4064,7 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 						docstring(),
 						&GuiViewPrivate::compileAndDestroy,
 						&Buffer::doExport,
-						nullptr, cmd.allowAsync());
+						nullptr, cmd.allowAsync(), true);
 			break;
 		}
 		case LFUN_MASTER_BUFFER_VIEW: {
@@ -4124,10 +4159,11 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			break;
 
 		case LFUN_FILE_INSERT: {
-			if (cmd.getArg(1) == "ignorelang")
-				insertLyXFile(from_utf8(cmd.getArg(0)), true);
-			else
-				insertLyXFile(cmd.argument());
+			bool const ignore_lang = cmd.getArg(1) == "ignorelang";
+			if (insertLyXFile(from_utf8(cmd.getArg(0)), ignore_lang)) {
+				dr.forceBufferUpdate();
+				dr.screenUpdate(Update::Force);
+			}
 			break;
 		}
 
@@ -4275,6 +4311,14 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			else
 				dr.setMessage(_("Developer mode is now disabled."));
 			break;
+
+		case LFUN_TOOLBAR_SET: {
+			string const name = cmd.getArg(0);
+			string const state = cmd.getArg(1);
+			if (GuiToolbar * t = toolbar(name))
+				t->setState(state);
+			break;
+		}
 
 		case LFUN_TOOLBAR_TOGGLE: {
 			string const name = cmd.getArg(0);

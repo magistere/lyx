@@ -22,7 +22,6 @@
 #include "LayoutModuleList.h"
 #include "ModuleList.h"
 #include "Preamble.h"
-#include "TextClass.h"
 
 #include "support/ConsoleApplication.h"
 #include "support/convert.h"
@@ -196,8 +195,8 @@ InsetLayout const * findInsetLayoutWithoutModule(TextClass const & tc,
 		if (ilay.second.latexname() == name &&
 		    (latexparam.empty() ||
 		     (!ilay.second.latexparam().empty() && suffixIs(latexparam, ilay.second.latexparam()))) &&
-		    ((command && ilay.second.latextype() == InsetLayout::COMMAND) ||
-		     (!command && ilay.second.latextype() == InsetLayout::ENVIRONMENT)))
+		    ((command && ilay.second.latextype() == InsetLaTeXType::COMMAND) ||
+		     (!command && ilay.second.latextype() == InsetLaTeXType::ENVIRONMENT)))
 			return &(ilay.second);
 	}
 	return 0;

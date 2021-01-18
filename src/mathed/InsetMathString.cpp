@@ -94,14 +94,14 @@ void InsetMathString::octave(OctaveStream & os) const
 }
 
 
-void InsetMathString::mathmlize(MathStream &) const
+void InsetMathString::mathmlize(MathMLStream &) const
 {
 	// useless, no doubt, but we should not be here
 	LATTEST(false);
 }
 
 
-void InsetMathString::write(WriteStream & os) const
+void InsetMathString::write(TeXMathStream & os) const
 {
 	writeString(str_, os);
 }

@@ -18,11 +18,12 @@
 #ifndef PREVIEWLOADER_H
 #define PREVIEWLOADER_H
 
+#include "ColorCode.h"
 #include "support/signals.h"
 
 #include <QObject>
 
-#include "ColorCode.h"
+#include <memory>
 
 namespace lyx {
 
@@ -39,8 +40,6 @@ public:
 	 *  LaTeX file.
 	 */
 	PreviewLoader(Buffer const & buffer);
-	///
-	~PreviewLoader();
 
 	/** Is there an image already associated with this snippet of LaTeX?
 	 *  If so, returns a pointer to it, else returns 0.
@@ -77,10 +76,10 @@ public:
 	 *  has been created and is ready for loading through
 	 *  lyx::graphics::PreviewImage::image().
 	 */
-	typedef signals2::signal<void(PreviewImage const &)> sig;
+	typedef signal<void(PreviewImage const &)> sig;
 	typedef sig::slot_type slot;
 	///
-	signals2::connection connect(slot const &) const;
+	connection connect(slot const &) const;
 
 	/** When PreviewImage has finished loading the image file into memory,
 	 *  it tells the PreviewLoader to tell the outside world
@@ -108,7 +107,7 @@ private:
 	/// Use the Pimpl idiom to hide the internals.
 	class Impl;
 	/// The pointer never changes although *pimpl_'s contents may.
-	Impl * const pimpl_;
+	std::shared_ptr<Impl> const pimpl_;
 };
 
 } // namespace graphics

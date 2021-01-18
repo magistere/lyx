@@ -356,7 +356,7 @@ public:
 	void expandFormats(MenuItem::Kind const kind, Buffer const * buf);
 	void expandFloatListInsert(Buffer const * buf);
 	void expandFloatInsert(Buffer const * buf);
-	void expandFlexInsert(Buffer const * buf, InsetLayout::InsetLyXType type);
+	void expandFlexInsert(Buffer const * buf, InsetLyXType type);
 	void expandTocSubmenu(std::string const & type, Toc const & toc_list);
 	void expandToc2(Toc const & toc_list, size_t from, size_t to, int depth, const string & toc_type);
 	void expandToc(Buffer const * buf);
@@ -1216,7 +1216,7 @@ void MenuDefinition::expandFloatInsert(Buffer const * buf)
 
 
 void MenuDefinition::expandFlexInsert(
-		Buffer const * buf, InsetLayout::InsetLyXType type)
+		Buffer const * buf, InsetLyXType type)
 {
 	if (!buf)
 		return;
@@ -1242,7 +1242,7 @@ void MenuDefinition::expandFlexInsert(
 		}
 	}
 	// FIXME This is a little clunky.
-	if (items_.empty() && type == InsetLayout::CUSTOM && !buf->hasReadonlyFlag())
+	if (items_.empty() && type == InsetLyXType::CUSTOM && !buf->hasReadonlyFlag())
 		add(MenuItem(MenuItem::Help, qt_("(No Custom Insets Defined)")));
 }
 
@@ -1415,8 +1415,19 @@ void MenuDefinition::expandToolbars()
 	Toolbars::Infos::const_iterator cit = guiApp->toolbars().begin();
 	Toolbars::Infos::const_iterator end = guiApp->toolbars().end();
 	for (; cit != end; ++cit) {
-		MenuItem const item(MenuItem::Command, toqstr(cit->gui_name),
-				FuncRequest(LFUN_TOOLBAR_TOGGLE, cit->name));
+		MenuItem item(MenuItem::Command, toqstr(cit->gui_name),
+			      FuncRequest(LFUN_TOOLBAR_TOGGLE, cit->name));
+		if (cit->allow_auto) {
+			MenuDefinition tristate;
+			tristate.add(MenuItem(MenuItem::Command, qt_("[[Toolbar]]On|O"),
+					      FuncRequest(LFUN_TOOLBAR_SET, cit->name + " on")));
+			tristate.add(MenuItem(MenuItem::Command, qt_("[[Toolbar]]Off|f"),
+					      FuncRequest(LFUN_TOOLBAR_SET, cit->name + " off")));
+			tristate.add(MenuItem(MenuItem::Command, qt_("[[Toolbar]]Automatic|A"),
+					      FuncRequest(LFUN_TOOLBAR_SET, cit->name + " auto")));
+			item = MenuItem(MenuItem::Submenu,toqstr(cit->gui_name));
+			item.setSubmenu(tristate);
+		}
 		if (guiApp->toolbars().isMainToolbar(cit->name))
 			add(item);
 		else
@@ -2312,11 +2323,11 @@ void Menus::Impl::expand(MenuDefinition const & frommenu,
 		}
 
 		case MenuItem::CharStyles:
-			tomenu.expandFlexInsert(buf, InsetLayout::CHARSTYLE);
+			tomenu.expandFlexInsert(buf, InsetLyXType::CHARSTYLE);
 			break;
 
 		case MenuItem::Custom:
-			tomenu.expandFlexInsert(buf, InsetLayout::CUSTOM);
+			tomenu.expandFlexInsert(buf, InsetLyXType::CUSTOM);
 			break;
 
 		case MenuItem::FloatListInsert:

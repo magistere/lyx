@@ -31,11 +31,11 @@ public:
 	bool getStatus(Cursor & cur, FuncRequest const & cmd,
 		FuncStatus & flag) const override;
 
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	///
 	void infoize(odocstream & os) const override;
 	///
-	void mathmlize(MathStream &) const override;
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

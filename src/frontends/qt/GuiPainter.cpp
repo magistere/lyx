@@ -233,14 +233,43 @@ void GuiPainter::arc(int x, int y, unsigned int w, unsigned int h,
 }
 
 
-void GuiPainter::image(int x, int y, int w, int h, graphics::Image const & i)
+void GuiPainter::image(int x, int y, int w, int h, graphics::Image const & i,
+		       bool revert_in_darkmode)
 {
 	graphics::GuiImage const & qlimage =
 		static_cast<graphics::GuiImage const &>(i);
 
 	fillRectangle(x, y, w, h, Color_graphicsbg);
 
-	QImage const & image = qlimage.image();
+	QImage image = qlimage.image();
+	
+	QPalette palette = QPalette();
+	QColor text_color = palette.color(QPalette::Active, QPalette::WindowText);
+	QColor bg_color = palette.color(QPalette::Active, QPalette::Window);
+	// guess whether we are in dark mode
+	bool const in_dark_mode = text_color.black() < bg_color.black();
+	// if we are in dark mode, check whether we have transparent pixels
+	if (in_dark_mode && !revert_in_darkmode) {
+		QImage img = image.convertToFormat(QImage::Format_ARGB32);
+		for (int x = 0 ; x < img.width() ; x++) {
+			if (revert_in_darkmode)
+				break;
+			for (int y = 0 ; y < img.height() ; y++) {
+				QRgb currentPixel = (img.pixel(x, y));
+				if (qAlpha(currentPixel) == 0) {
+					// we have transparent pixels, revert
+					// this image in dark mode (#12076)
+					revert_in_darkmode = true;
+					break;
+				}
+			}
+		}
+	}
+	if (in_dark_mode && revert_in_darkmode)
+		// FIXME this is only a cheap approximation
+		// Ideally, replace colors as in GuiApplication::prepareForDarkmode()
+		image.invertPixels();
+
 	QRectF const drect = QRectF(x, y, w, h);
 	QRectF const srect = QRectF(0, 0, image.width(), image.height());
 	// Bilinear filtering is needed on a rare occasion for instant previews when
@@ -415,7 +444,7 @@ void GuiPainter::buttonText(int x, int baseline, docstring const & s,
 	FontMetrics const & fm = theFontMetrics(font);
 	fm.buttonText(s, offset, width, ascent, descent);
 
-	static int const d = offset / 2;
+	int const d = offset / 2;
 
 	fillRectangle(x + d + 1, baseline - ascent + 1, width - offset - 1,
 			      ascent + descent - 1, back);

@@ -103,6 +103,13 @@ void InsetRef::changeTarget(docstring const & new_label)
 
 void InsetRef::doDispatch(Cursor & cur, FuncRequest & cmd)
 {
+	// Ctrl + click: go to label
+	if (cmd.action() == LFUN_MOUSE_RELEASE && cmd.modifier() == ControlModifier) {
+			lyx::dispatch(FuncRequest(LFUN_BOOKMARK_SAVE, "0"));
+			lyx::dispatch(FuncRequest(LFUN_LABEL_GOTO, getParam("reference")));
+			return;
+		}
+
 	string const inset = cmd.getArg(0);
 	string const arg   = cmd.getArg(1);
 	string pstring;
@@ -124,19 +131,13 @@ void InsetRef::doDispatch(Cursor & cur, FuncRequest & cmd)
 		}
 	}
 
-	// Ctrl + click: go to label
-	if (cmd.action() == LFUN_MOUSE_RELEASE && cmd.modifier() == ControlModifier) {
-			lyx::dispatch(FuncRequest(LFUN_BOOKMARK_SAVE, "0"));
-			lyx::dispatch(FuncRequest(LFUN_LABEL_GOTO, getParam("reference")));
-			return;
-		}
-
 	// otherwise not for us
 	if (pstring.empty())
 		return InsetCommand::doDispatch(cur, cmd);
 
 	bool const isSet = (getParam(pstring) == "true");
 	setParam(pstring, from_ascii(isSet ? "false"  : "true"));
+	cur.forceBufferUpdate();
 }
 
 
@@ -174,16 +175,6 @@ bool InsetRef::getStatus(Cursor & cur, FuncRequest const & cmd,
 }
 
 
-namespace {
-
-void capitalize(docstring & s) {
-	char_type t = uppercase(s[0]);
-	s[0] = t;
-}
-
-} // namespace
-
-
 // the ref argument is the label name we are referencing.
 // we expect ref to be in the form: pfx:suffix.
 //
@@ -199,7 +190,8 @@ void capitalize(docstring & s) {
 // label, thus: \prettyref{pfx:suffix}.
 //
 docstring InsetRef::getFormattedCmd(docstring const & ref,
-	docstring & label, docstring & prefix, docstring const & caps) const
+	docstring & label, docstring & prefix, bool use_refstyle,
+	bool use_caps)
 {
 	static docstring const defcmd = from_ascii("\\ref");
 	static docstring const prtcmd = from_ascii("\\prettyref");
@@ -216,11 +208,12 @@ docstring InsetRef::getFormattedCmd(docstring const & ref,
 
 	if (prefix.empty()) {
 		// we have ":xxxx"
+		LYXERR0("Label `" << ref << "' contains nothign before `:'.");
 		label = ref;
 		return defcmd;
 	}
 
-	if (!buffer().params().use_refstyle) {
+	if (!use_refstyle) {
 		// \prettyref uses the whole label
 		label = ref;
 		return prtcmd;
@@ -237,8 +230,8 @@ docstring InsetRef::getFormattedCmd(docstring const & ref,
 			return defcmd;
 		}
 	}
-	if (caps == "true") {
-		capitalize(prefix);
+	if (use_caps) {
+		prefix = support::capitalize(prefix);
 	}
 	return from_ascii("\\") + prefix + from_ascii("ref");
 }
@@ -261,7 +254,7 @@ void InsetRef::latex(otexstream & os, OutputParams const & rp) const
 	if (rp.inulemcmd > 0)
 		os << "\\mbox{";
 
-	if (cmd == "eqref" && buffer().params().use_refstyle) {
+	if (buffer().params().use_refstyle && cmd == "eqref") {
 		// we advertise this as printing "(n)", so we'll do that, at least
 		// for refstyle, since refstlye's own \eqref prints, by default,
 		// "equation n". if one wants \eqref, one can get it by using a
@@ -271,10 +264,13 @@ void InsetRef::latex(otexstream & os, OutputParams const & rp) const
 	else if (cmd == "formatted") {
 		docstring label;
 		docstring prefix;
+		bool const use_caps     = getParam("caps") == "true";
+		bool const use_plural   = getParam("plural") == "true";
+		bool const use_refstyle = buffer().params().use_refstyle;
 		docstring const fcmd =
-			getFormattedCmd(data, label, prefix, getParam("caps"));
+			getFormattedCmd(data, label, prefix, use_refstyle, use_caps);
 		os << fcmd;
-		if (buffer().params().use_refstyle && getParam("plural") == "true")
+		if (use_refstyle && use_plural)
 		    os << "[s]";
 		os << '{' << label << '}';
 	}
@@ -463,6 +459,18 @@ void InsetRef::updateBuffer(ParIterator const & it, UpdateType, bool const /*del
 	for (int i = 0; !types[i].latex_name.empty(); ++i) {
 		if (cmd == types[i].latex_name) {
 			label = _(types[i].short_gui_name);
+			// indicate plural and caps
+			if (cmd == "formatted") {
+				bool const isPlural = getParam("plural") == "true";
+				bool const isCaps = getParam("caps") == "true";
+				if (isPlural)
+					label += from_ascii("+");
+				if (isCaps) {
+					// up arrow (shift key) symbol
+					label += docstring(1, char_type(0x21E7));
+				}
+			}
+			label += from_ascii(": ");
 			break;
 		}
 	}
@@ -542,9 +550,11 @@ void InsetRef::validate(LaTeXFeatures & features) const
 		docstring const data = getEscapedLabel(features.runparams());
 		docstring label;
 		docstring prefix;
+		bool const use_refstyle = buffer().params().use_refstyle;
+		bool const use_caps   = getParam("caps") == "true";
 		docstring const fcmd =
-			getFormattedCmd(data, label, prefix, getParam("caps"));
-		if (buffer().params().use_refstyle) {
+			getFormattedCmd(data, label, prefix, use_refstyle, use_caps);
+		if (use_refstyle) {
 			features.require("refstyle");
 			if (prefix == "cha")
 				features.addPreambleSnippet(from_ascii("\\let\\charef=\\chapref"));
@@ -582,14 +592,14 @@ bool InsetRef::forceLTR(OutputParams const & rp) const
 
 
 InsetRef::type_info const InsetRef::types[] = {
-	{ "ref",       N_("Standard"),              N_("Ref: ")},
-	{ "eqref",     N_("Equation"),              N_("EqRef: ")},
-	{ "pageref",   N_("Page Number"),           N_("Page: ")},
-	{ "vpageref",  N_("Textual Page Number"),   N_("TextPage: ")},
-	{ "vref",      N_("Standard+Textual Page"), N_("Ref+Text: ")},
-	{ "nameref",   N_("Reference to Name"),     N_("NameRef: ")},
-	{ "formatted", N_("Formatted"),             N_("Format: ")},
-	{ "labelonly", N_("Label Only"),            N_("Label: ")},
+	{ "ref",       N_("Standard"),              N_("Ref")},
+	{ "eqref",     N_("Equation"),              N_("EqRef")},
+	{ "pageref",   N_("Page Number"),           N_("Page")},
+	{ "vpageref",  N_("Textual Page Number"),   N_("TextPage")},
+	{ "vref",      N_("Standard+Textual Page"), N_("Ref+Text")},
+	{ "nameref",   N_("Reference to Name"),     N_("NameRef")},
+	{ "formatted", N_("Formatted"),             N_("Format")},
+	{ "labelonly", N_("Label Only"),            N_("Label")},
 	{ "", "", "" }
 };
 

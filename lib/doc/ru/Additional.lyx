@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 599
+\lyxformat 600
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -8190,7 +8190,7 @@ references
 deluxetable
 \family default
  (2.15).
- Если вам действительно действительно нужно использовать 
+ Если вам действительно нужно использовать 
 \family sans
 deluxetable
 \family default
@@ -11568,7 +11568,7 @@ Chk\SpecialChar TeX
 \end_layout
 
 \begin_layout Itemize
-Нет пробела перед скобками и/или после после них:
+Нет пробела перед скобками и/или после них:
 \begin_inset Newline newline
 \end_inset
 
@@ -19068,7 +19068,7 @@ status open
 \begin_layout Standard
 \begin_inset CommandInset include
 LatexCommand input
-filename "C:/Program Files (x86)/LyX 2.3/Resources/doc/SpecialParagraphShape.tex"
+filename "../SpecialParagraphShape.tex"
 literal "true"
 
 \end_inset

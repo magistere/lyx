@@ -10,6 +10,7 @@
 
 #include <config.h>
 
+#include "InsetLayout.h"
 #include "InsetText.h"
 
 #include "insets/InsetArgument.h"
@@ -319,6 +320,7 @@ void InsetText::doDispatch(Cursor & cur, FuncRequest & cmd)
 		fixParagraphsFont();
 		break;
 
+	case LFUN_INSET_SPLIT:
 	case LFUN_INSET_DISSOLVE: {
 		bool const main_inset = text_.isMainText();
 		bool const target_inset = cmd.argument().empty()
@@ -350,6 +352,7 @@ bool InsetText::getStatus(Cursor & cur, FuncRequest const & cmd,
 	FuncStatus & status) const
 {
 	switch (cmd.action()) {
+	case LFUN_INSET_SPLIT:
 	case LFUN_INSET_DISSOLVE: {
 		bool const main_inset = text_.isMainText();
 		bool const target_inset = cmd.argument().empty()
@@ -469,7 +472,7 @@ void InsetText::latex(otexstream & os, OutputParams const & runparams) const
 		os << breakln;
 	bool needendgroup = false;
 	if (!il.latexname().empty()) {
-		if (il.latextype() == InsetLayout::COMMAND) {
+		if (il.latextype() == InsetLaTeXType::COMMAND) {
 			// FIXME UNICODE
 			// FIXME \protect should only be used for fragile
 			//    commands, but we do not provide this information yet.
@@ -488,7 +491,7 @@ void InsetText::latex(otexstream & os, OutputParams const & runparams) const
 			if (!il.latexparam().empty())
 				os << from_utf8(il.latexparam());
 			os << '{';
-		} else if (il.latextype() == InsetLayout::ENVIRONMENT) {
+		} else if (il.latextype() == InsetLaTeXType::ENVIRONMENT) {
 			if (il.isDisplay())
 				os << breakln;
 			else
@@ -540,13 +543,13 @@ void InsetText::latex(otexstream & os, OutputParams const & runparams) const
 		os << il.rightdelim();
 
 	if (!il.latexname().empty()) {
-		if (il.latextype() == InsetLayout::COMMAND) {
+		if (il.latextype() == InsetLaTeXType::COMMAND) {
 			os << "}";
 			if (!il.postcommandargs().empty())
 				getArgs(os, runparams, true);
 			if (needendgroup)
 				os << "\\endgroup";
-		} else if (il.latextype() == InsetLayout::ENVIRONMENT) {
+		} else if (il.latextype() == InsetLaTeXType::ENVIRONMENT) {
 			// A comment environment doesn't need a % before \n\end
 			if (il.isDisplay() || runparams.inComment)
 				os << breakln;
@@ -924,6 +927,36 @@ bool InsetText::insetAllowed(InsetCode code) const
 }
 
 
+bool InsetText::allowSpellCheck() const
+{
+	return getLayout().spellcheck() && !getLayout().isPassThru();
+}
+
+
+bool InsetText::allowMultiPar() const
+{
+	return getLayout().isMultiPar();
+}
+
+
+bool InsetText::forcePlainLayout(idx_type) const
+{
+	return getLayout().forcePlainLayout();
+}
+
+
+bool InsetText::allowParagraphCustomization(idx_type) const
+{
+	return getLayout().allowParagraphCustomization();
+}
+
+
+bool InsetText::forceLocalFontSwitch() const
+{
+	return getLayout().forceLocalFontSwitch();
+}
+
+
 void InsetText::updateBuffer(ParIterator const & it, UpdateType utype, bool const deleted)
 {
 	ParIterator it2 = it;
@@ -1245,7 +1278,7 @@ bool InsetText::needsCProtection(bool const maintext, bool const fragile) const
 		return true;
 
 	// Environments generally need cprotection in fragile context
-	if (fragile && getLayout().latextype() == InsetLayout::ENVIRONMENT)
+	if (fragile && getLayout().latextype() == InsetLaTeXType::ENVIRONMENT)
 		return true;
 
 	if (!getLayout().needsCProtect())
@@ -1253,7 +1286,7 @@ bool InsetText::needsCProtection(bool const maintext, bool const fragile) const
 
 	// Environments and "no latex" types (e.g., knitr chunks)
 	// need cprotection regardless the content
-	if (!maintext && getLayout().latextype() != InsetLayout::COMMAND)
+	if (!maintext && getLayout().latextype() != InsetLaTeXType::COMMAND)
 		return true;
 
 	// If the inset does not produce output (e.g. Note or Branch),

@@ -91,7 +91,7 @@ void InsetMathSpecialChar::drawT(TextPainter & pain, int x, int y) const
 }
 
 
-void InsetMathSpecialChar::write(WriteStream & os) const
+void InsetMathSpecialChar::write(TeXMathStream & os) const
 {
 	os << '\\' << name_;
 	if (name_.size() != 1)
@@ -132,7 +132,7 @@ void InsetMathSpecialChar::octave(OctaveStream & os) const
 }
 
 
-void InsetMathSpecialChar::mathmlize(MathStream & ms) const
+void InsetMathSpecialChar::mathmlize(MathMLStream & ms) const
 {
 	switch (char_) {
 	case '&':

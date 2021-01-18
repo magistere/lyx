@@ -40,7 +40,7 @@ export/templates/Articles/Association_for_Computing_Machinery_.*_lyx23
 # which trigger a warning message leading to test failure.
 export/examples/(|de/|fr/|ja/)Presentations/Beamer_lyx(16|20)
 export/examples/Presentations/Beamer_.*Complex.*_lyx(16|20)
-export/templates/(|de/|es/|fr/|ja/)Presentations/Beamer_lyx(16|20)
+export/templates/(|de/|es/|fr/|ja/|ar/)Presentations/Beamer_lyx(16|20)
 #
 # modernCV fails for versions < 2.1
 # * reversed order of \end_layout and \end_inset results in corrupt LyX file
@@ -393,7 +393,7 @@ Sublabel: varioref
 # varioref is not working with XeTeX/LuaTeX for Russian, as it uses some
 # char macros which are not defined for these engines.
 export/doc/ru/UserGuide_(dvi3|pdf[45])_(system|tex)F
-export/doc/ru/(Math|Additional)_(dvi3|pdf[45])_systemF
+export/doc/ru/(Math|Additional|Shortcuts)_(dvi3|pdf[45])_systemF
 
 
 # ================================================
@@ -519,8 +519,6 @@ export/templates/Articles/Mathematical_Monthly_docbook5
 export/templates/Articles/Int._Journal_of_Modern_Physics_(C|D)_docbook5
 # - Broken references.
 export/templates/Articles/Journal_of_the_Acoustical_Society_of_America_%28JASA%29_docbook5
-export/templates/Articles/Astronomy_%26_Astrophysics_docbook5
-export/templates/Articles/American_Psychological_Association_%28APA%29_docbook5
 export/templates/Articles/Institute_of_Physics_%28IOP%29_docbook5
 # - Empty article!?
 export/templates/Articles/Hebrew_Article_%28KOMA-Script%29_docbook5
@@ -542,5 +540,5 @@ export/.*Poster.*_docbook5
 Sublabel: docbook beamer
 # Beamer is not yet implemented. One test passes, but mostly by chance.
 !export/templates/Presentations/Slides_docbook5
-export/(examples|templates)/(de|es|fr|ja|ru)/Presentations/.*_docbook5
+export/(examples|templates)/(ar|de|es|fr|ja|ru)/Presentations/.*_docbook5
 export/(examples|templates)/Presentations/.*_docbook5

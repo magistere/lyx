@@ -86,6 +86,7 @@
 #include <tuple>
 
 #include <QByteArray>
+#include <QBitmap>
 #include <QDateTime>
 #include <QDesktopWidget>
 #include <QEvent>
@@ -102,6 +103,7 @@
 #include <QMenuBar>
 #include <QMimeData>
 #include <QObject>
+#include <QPainter>
 #include <QPixmap>
 #include <QRegExp>
 #include <QSessionManager>
@@ -475,9 +477,10 @@ QString themeIconName(QString const & action)
 }
 
 
-// the returned bool is true if the icon needs to be flipped
-pair<QString,bool> iconName(FuncRequest const & f, bool unknown, bool rtl)
+IconInfo iconInfo(FuncRequest const & f, bool unknown, bool rtl)
 {
+	IconInfo res;
+
 	QStringList names;
 	QString lfunname = toqstr(lyxaction.getActionName(f.action()));
 
@@ -527,7 +530,7 @@ pair<QString,bool> iconName(FuncRequest const & f, bool unknown, bool rtl)
 	search_mode const mode = theGuiApp()->imageSearchMode();
 	// The folders where icons are searched for
 	QStringList imagedirs;
-	imagedirs << "images/" << "images/ipa/";
+	imagedirs << "images/ipa/" << "images/";
 	// This is used to search for rtl version of icons which have the +rrtl suffix.
 	QStringList suffixes;
 	if (rtl)
@@ -539,16 +542,60 @@ pair<QString,bool> iconName(FuncRequest const & f, bool unknown, bool rtl)
 			for (QString const & suffix : suffixes) {
 				QString id = imagedir;
 				FileName fname = imageLibFileSearch(id, name + suffix, "svgz,png", mode);
-				if (fname.exists())
-					return make_pair(toqstr(fname.absFileName()),
-					                 rtl && suffix.isEmpty());
+				if (fname.exists()) {
+					docstring const fpath = fname.absoluteFilePath();
+					res.filepath = toqstr(fname.absFileName());
+					// these icons are subject to inversion in dark mode
+					res.invert = (contains(fpath, from_ascii("math")) || contains(fpath, from_ascii("ert-insert"))
+						      || suffixIs(fname.onlyPath().absoluteFilePath(), from_ascii("ipa")));
+					res.swap = rtl && suffix.isEmpty();
+					return res;
+				}
 			}
 
 	LYXERR(Debug::GUI, "Cannot find icon for command \""
 			   << lyxaction.getActionName(f.action())
 			   << '(' << to_utf8(f.argument()) << ")\"");
 
-	return make_pair(QString(), false);
+	return res;
+}
+
+
+QPixmap prepareForDarkMode(QPixmap pixmap)
+{
+	QPalette palette = QPalette();
+	QColor text_color = palette.color(QPalette::Active, QPalette::WindowText);
+	QColor bg_color = palette.color(QPalette::Active, QPalette::Window);
+
+	// guess whether we are in dark mode
+	if (text_color.black() > bg_color.black())
+		// not in dark mode, do nothing
+		return pixmap;
+
+	// create a layer with black text turned to QPalette::WindowText
+	QPixmap black_overlay(pixmap.size());
+	black_overlay.fill(text_color);
+	black_overlay.setMask(pixmap.createMaskFromColor(Qt::black, Qt::MaskOutColor));
+
+	// create a layer with blue text turned to lighter blue
+	QPixmap blue_overlay(pixmap.size());
+	QColor math_blue(0, 0, 255);
+	blue_overlay.fill(guiApp->colorCache().get(Color(Color_math)));
+	blue_overlay.setMask(pixmap.createMaskFromColor(math_blue, Qt::MaskOutColor));
+
+	// create a layer with ("latex") red text turned to lighter red
+	QPixmap red_overlay(pixmap.size());
+	QColor math_red(128, 0, 0);
+	red_overlay.fill(guiApp->colorCache().get(Color(Color_latex)));
+	red_overlay.setMask(pixmap.createMaskFromColor(math_red, Qt::MaskOutColor));
+
+	// put layers on top of existing pixmap
+	QPainter painter(&pixmap);
+	painter.drawPixmap(pixmap.rect(), black_overlay);
+	painter.drawPixmap(pixmap.rect(), blue_overlay);
+	painter.drawPixmap(pixmap.rect(), red_overlay);
+
+	return pixmap;
 }
 
 
@@ -559,8 +606,11 @@ QPixmap getPixmap(QString const & path, QString const & name, QString const & ex
 	QString fpath = toqstr(fname.absFileName());
 	QPixmap pixmap = QPixmap();
 
-	if (pixmap.load(fpath))
+	if (pixmap.load(fpath)) {
+		if (fpath.contains("math") || fpath.contains("ipa"))
+			return prepareForDarkMode(pixmap);
 		return pixmap;
+	}
 
 	bool const list = ext.contains(",");
 	LYXERR(Debug::GUI, "Cannot load pixmap \""
@@ -588,20 +638,21 @@ QIcon getIcon(FuncRequest const & f, bool unknown, bool rtl)
 	}
 #endif
 
-	QString icon;
-	bool flip;
-	tie(icon, flip) = iconName(f, unknown, rtl);
-	if (icon.isEmpty())
+	IconInfo icondata = iconInfo(f, unknown, rtl);
+	if (icondata.filepath.isEmpty())
 		return QIcon();
 
 	//LYXERR(Debug::GUI, "Found icon: " << icon);
 	QPixmap pixmap = QPixmap();
-	if (!pixmap.load(icon)) {
-		LYXERR0("Cannot load icon " << icon << ".");
+	if (!pixmap.load(icondata.filepath)) {
+		LYXERR0("Cannot load icon " << icondata.filepath << ".");
 		return QIcon();
 	}
 
-	if (flip)
+	if (icondata.invert)
+		pixmap = prepareForDarkMode(pixmap);
+
+	if (icondata.swap)
 		return QIcon(pixmap.transformed(QTransform().scale(-1, 1)));
 	else
 		return QIcon(pixmap);
@@ -638,7 +689,7 @@ public:
 	QString translate(const char * /* context */,
 		const char *sourceText,
 #if QT_VERSION >= 0x050000
-		const char * /* disambiguation */ = 0, int /* n */ = -1) const override
+		const char * /* disambiguation */ = nullptr, int /* n */ = -1) const override
 #else
 		const char * /*comment*/ = 0) const override
 #endif
@@ -1005,6 +1056,7 @@ GuiApplication::GuiApplication(int & argc, char ** argv)
 	setDesktopFileName(lyx_package);
 #endif
 
+	// FIXME Deprecated. Should use QRandomGenerator since 5.10
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	// Install LyX translator for missing Qt translations
@@ -1129,7 +1181,7 @@ void GuiApplication::clearSession()
 
 docstring Application::iconName(FuncRequest const & f, bool unknown)
 {
-	return qstring_to_ucs4(lyx::frontend::iconName(f, unknown, false).first);
+	return qstring_to_ucs4(lyx::frontend::iconInfo(f, unknown, false).filepath);
 }
 
 
@@ -1412,7 +1464,7 @@ DispatchResult const & GuiApplication::dispatch(FuncRequest const & cmd)
 {
 	DispatchResult dr;
 
-	Buffer * buffer = 0;
+	Buffer * buffer = nullptr;
 	if (cmd.view_origin() && current_view_ != cmd.view_origin()) {
 		//setCurrentView(cmd.view_origin); //does not work
 		dr.setError(true);
@@ -1502,8 +1554,8 @@ void GuiApplication::gotoBookmark(unsigned int idx, bool openFile,
 
 	// if the current buffer is not that one, switch to it.
 	BufferView * doc_bv = current_view_ ?
-		current_view_->documentBufferView() : 0;
-	Cursor const * old = doc_bv ? &doc_bv->cursor() : 0;
+		current_view_->documentBufferView() : nullptr;
+	Cursor const * old = doc_bv ? &doc_bv->cursor() : nullptr;
 	if (!doc_bv || doc_bv->buffer().fileName() != tmp.filename) {
 		if (switchToBuffer) {
 			dispatch(FuncRequest(LFUN_BUFFER_SWITCH, file));
@@ -1580,7 +1632,7 @@ void GuiApplication::validateCurrentView()
 		// currently at least one view exists but no view has the focus.
 		// choose the last view to make it current.
 		// a view without any open document is preferred.
-		GuiView * candidate = 0;
+		GuiView * candidate = nullptr;
 		QHash<int, GuiView *>::const_iterator it = d->views_.begin();
 		QHash<int, GuiView *>::const_iterator end = d->views_.end();
 		for (; it != end; ++it) {
@@ -1633,9 +1685,10 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		break;
 
 	case LFUN_WINDOW_CLOSE:
+		// FIXME: this is done also in GuiView::closeBuffer()!
 		// update bookmark pit of the current buffer before window close
-		for (size_t i = 0; i < theSession().bookmarks().size(); ++i)
-			gotoBookmark(i+1, false, false);
+		for (size_t i = 1; i < theSession().bookmarks().size(); ++i)
+			gotoBookmark(i, false, false);
 		// clear the last opened list, because
 		// maybe this will end the session
 		theSession().lastOpened().clear();
@@ -1667,7 +1720,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 	case LFUN_BUFFER_NEW:
 		validateCurrentView();
 		if (!current_view_
-		   || (!lyxrc.open_buffers_in_tabs && current_view_->documentBufferView() != 0)) {
+		   || (!lyxrc.open_buffers_in_tabs && current_view_->documentBufferView() != nullptr)) {
 			createView(QString(), false); // keep hidden
 			current_view_->newDocument(to_utf8(cmd.argument()));
 			current_view_->show();
@@ -1682,7 +1735,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		string const temp = cmd.getArg(1);
 		validateCurrentView();
 		if (!current_view_
-		   || (!lyxrc.open_buffers_in_tabs && current_view_->documentBufferView() != 0)) {
+		   || (!lyxrc.open_buffers_in_tabs && current_view_->documentBufferView() != nullptr)) {
 			createView();
 			current_view_->newDocument(file, temp, true);
 			if (!current_view_->documentBufferView())
@@ -1703,7 +1756,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			&& theBufferList().getBuffer(FileName(fname));
 		if (!current_view_
 		    || (!lyxrc.open_buffers_in_tabs
-			&& current_view_->documentBufferView() != 0
+			&& current_view_->documentBufferView() != nullptr
 			&& !is_open)) {
 			// We want the ui session to be saved per document and not per
 			// window number. The filename crc is a good enough identifier.
@@ -1729,7 +1782,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 
 	case LFUN_HELP_OPEN: {
 		// FIXME: create a new method shared with LFUN_FILE_OPEN.
-		if (current_view_ == 0)
+		if (current_view_ == nullptr)
 			createView();
 		string const arg = to_utf8(cmd.argument());
 		if (arg.empty()) {
@@ -1755,11 +1808,12 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 
 	case LFUN_SET_COLOR: {
 		string const lyx_name = cmd.getArg(0);
-		string const x11_name = cmd.getArg(1);
+		string x11_name = cmd.getArg(1);
+		string x11_darkname = cmd.getArg(2);
 		if (lyx_name.empty() || x11_name.empty()) {
 			if (current_view_)
 				current_view_->message(
-					_("Syntax: set-color <lyx_name> <x11_name>"));
+					_("Syntax: set-color <lyx_name> <x11_name> <x11_darkname>"));
 			break;
 		}
 
@@ -1772,7 +1826,11 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			graphics::GCache::get().changeDisplay(true);
 #endif
 
-		if (!lcolor.setColor(lyx_name, x11_name)) {
+		if (x11_darkname.empty() && colorCache().isDarkMode()) {
+			x11_darkname = x11_name;
+			x11_name.clear();
+		}
+		if (!lcolor.setColor(lyx_name, x11_name, x11_darkname)) {
 			if (current_view_)
 				current_view_->message(
 					bformat(_("Set-color \"%1$s\" failed "
@@ -1897,7 +1955,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		string arg = argument;
 		// FIXME: this LFUN should also work without any view.
 		Buffer * buffer = (current_view_ && current_view_->documentBufferView())
-				  ? &(current_view_->documentBufferView()->buffer()) : 0;
+				  ? &(current_view_->documentBufferView()->buffer()) : nullptr;
 		// This handles undo groups automagically
 		UndoGroupHelper ugh(buffer);
 		while (!arg.empty()) {
@@ -1927,7 +1985,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			// all of the buffers might be locally hidden. That is, there is no
 			// active buffer.
 			if (!view || !view->currentBufferView())
-				activeBuffers[view] = 0;
+				activeBuffers[view] = nullptr;
 			else
 				activeBuffers[view] = &view->currentBufferView()->buffer();
 
@@ -1952,7 +2010,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 
 		GuiView * const homeView = currentView();
 		Buffer * b = theBufferList().first();
-		Buffer * nextBuf = 0;
+		Buffer * nextBuf = nullptr;
 		int numProcessed = 0;
 		while (true) {
 			if (b != last)
@@ -2084,6 +2142,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 
 	case LFUN_BOOKMARK_CLEAR:
 		theSession().bookmarks().clear();
+		dr.screenUpdate(Update::Force);
 		break;
 
 	case LFUN_DEBUG_LEVEL_SET:
@@ -2103,7 +2162,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			// is not terminated when closing the last view.
 			// Create a new one to be able to dispatch the
 			// LFUN_DIALOG_SHOW to this view.
-			if (current_view_ == 0)
+			if (current_view_ == nullptr)
 				createView();
 		}
 	}
@@ -2378,7 +2437,7 @@ void GuiApplication::resetGui()
 		return;
 
 	if (d->global_menubar_)
-		d->menus_.fillMenuBar(d->global_menubar_, 0, false);
+		d->menus_.fillMenuBar(d->global_menubar_, nullptr, false);
 
 	QHash<int, GuiView *>::iterator it;
 	for (it = d->views_.begin(); it != d->views_.end(); ++it) {
@@ -2666,7 +2725,7 @@ void GuiApplication::restoreGuiSession()
 	for (auto const & last : lastopened) {
 		FileName const & file_name = last.file_name;
 		if (!current_view_ || (!lyxrc.open_buffers_in_tabs
-			  && current_view_->documentBufferView() != 0)) {
+			  && current_view_->documentBufferView() != nullptr)) {
 			string const & fname = file_name.absFileName();
 			createView(support::checksum(fname));
 		}
@@ -2930,7 +2989,7 @@ void GuiApplication::unregisterView(GuiView * gv)
 	if(d->views_.contains(gv->id()) && d->views_.value(gv->id()) == gv) {
 		d->views_.remove(gv->id());
 		if (current_view_ == gv)
-			current_view_ = 0;
+			current_view_ = nullptr;
 	}
 }
 
@@ -2987,7 +3046,7 @@ void GuiApplication::hideDialogs(string const & name, Inset * inset) const
 
 Buffer const * GuiApplication::updateInset(Inset const * inset) const
 {
-	Buffer const * buf = 0;
+	Buffer const * buf = nullptr;
 	QHash<int, GuiView *>::const_iterator end = d->views_.end();
 	for (QHash<int, GuiView *>::iterator it = d->views_.begin(); it != end; ++it) {
 		if (Buffer const * ptr = (*it)->updateInset(inset))
@@ -3000,7 +3059,7 @@ Buffer const * GuiApplication::updateInset(Inset const * inset) const
 bool GuiApplication::searchMenu(FuncRequest const & func,
 	docstring_list & names) const
 {
-	BufferView * bv = 0;
+	BufferView * bv = nullptr;
 	if (current_view_)
 		bv = current_view_->currentBufferView();
 	return d->menus_.searchMenu(func, names, bv);

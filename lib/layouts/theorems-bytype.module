@@ -12,9 +12,9 @@
 
 # Author: Paul Rubin <rubin@msu.edu> (hacked from Richard Kimberly Heck's theorems-std.module)
 
-Format 89
+Format 90
 
-Input theorem-counters-bytype.inc
+Input theorems-counters-bytype.inc
 Input theorems-bytype.inc
 Input theorems-proof.inc
 

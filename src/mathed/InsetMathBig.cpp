@@ -120,7 +120,7 @@ void InsetMathBig::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathBig::write(WriteStream & os) const
+void InsetMathBig::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << '\\' << name_ << delim_;
@@ -135,7 +135,7 @@ void InsetMathBig::normalize(NormalStream & os) const
 }
 
 
-void InsetMathBig::mathmlize(MathStream & ms) const
+void InsetMathBig::mathmlize(MathMLStream & ms) const
 {
 	ms << "<" << from_ascii(ms.namespacedTag("mo"))
 	   << " form='prefix' fence='true' stretchy='true' symmetric='true'>"

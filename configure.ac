@@ -3,7 +3,7 @@ dnl Process with autoconf to generate configure script   -*- sh -*-
 AC_INIT([LyX],[2.4.0dev],[lyx-devel@lists.lyx.org],[lyx])
 AC_PRESERVE_HELP_ORDER
 # Use ISO format only. The frontend needs to parse this
-AC_SUBST(LYX_DATE, ["2018-02-24"])
+AC_SUBST(LYX_DATE, ["2020-12-28"])
 AC_PREREQ([2.65])
 AC_CONFIG_SRCDIR(src/main.cpp)
 AC_CONFIG_HEADERS([config.h])
@@ -94,6 +94,7 @@ AC_SUBST(LIBPSAPI)
 AC_CHECK_LIB(gdi32, main)
 AC_CHECK_LIB(ole32, main)
 
+LYX_USE_INCLUDED_NOD
 LYX_USE_INCLUDED_BOOST
 
 ### we need to know the byte order for unicode conversions
@@ -337,6 +338,7 @@ AC_CONFIG_FILES([Makefile \
       3rdparty/dtl/Makefile \
       3rdparty/hunspell/Makefile \
       3rdparty/mythes/Makefile \
+      3rdparty/nod/Makefile \
       3rdparty/libiconv/Makefile \
       $ICONV_ICONV_H_IN \
       3rdparty/zlib/Makefile \

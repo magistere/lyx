@@ -195,7 +195,7 @@ void InsetMathSpace::octave(OctaveStream & os) const
 }
 
 
-void InsetMathSpace::mathmlize(MathStream & ms) const
+void InsetMathSpace::mathmlize(MathMLStream & ms) const
 {
 	SpaceInfo const & si = space_info[space_];
 	if (si.negative || !si.visible)
@@ -266,7 +266,7 @@ void InsetMathSpace::normalize(NormalStream & os) const
 }
 
 
-void InsetMathSpace::write(WriteStream & os) const
+void InsetMathSpace::write(TeXMathStream & os) const
 {
 	// All kinds work in text and math mode, so simply suspend
 	// writing a possibly pending mode closing brace.
@@ -320,8 +320,8 @@ void InsetMathSpace::doDispatch(Cursor & cur, FuncRequest & cmd)
 	case LFUN_INSET_MODIFY:
 		if (cmd.getArg(0) == "mathspace") {
 			MathData ar;
-			Buffer * buf = buffer_;
 			if (createInsetMath_fromDialogStr(cmd.argument(), ar)) {
+				Buffer * buf = buffer_;
 				cur.recordUndo();
 				*this = *ar[0].nucleus()->asSpaceInset();
 				buffer_ = buf;

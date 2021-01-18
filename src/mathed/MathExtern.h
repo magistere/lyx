@@ -21,25 +21,25 @@ class NormalStream;
 class MapleStream;
 class MaximaStream;
 class MathematicaStream;
-class MathStream;
+class MathMLStream;
 class OctaveStream;
-class WriteStream;
+class TeXMathStream;
 class MathData;
 
-void write(MathData const &, WriteStream &);
+void write(MathData const &, TeXMathStream &);
 void htmlize(MathData const &, HtmlStream &);
 void normalize(MathData const &, NormalStream &);
 void maple(MathData const &, MapleStream &);
 void maxima(MathData const &, MaximaStream &);
 void mathematica(MathData const &, MathematicaStream &);
-void mathmlize(MathData const &, MathStream &);
+void mathmlize(MathData const &, MathMLStream &);
 void octave(MathData const &, OctaveStream &);
 
 bool extractNumber(MathData const & ar, int & i);
 bool extractNumber(MathData const & ar, double & i);
 
 /// Write \p s (which may contain math or text contents in LaTeX syntax) to \p os
-void writeString(docstring const & s, WriteStream & os);
+void writeString(docstring const & s, TeXMathStream & os);
 
 MathData pipeThroughExtern(std::string const & language,
 	docstring const & extra, MathData const & ar);

@@ -58,10 +58,12 @@ docstring InsetMathSymbol::name() const
 
 
 /// The default limits value
-Limits InsetMathSymbol::defaultLimits() const
+Limits InsetMathSymbol::defaultLimits(bool display) const
 {
-	return (allowsLimitsChange() && sym_->extra != "func")
-			? LIMITS : NO_LIMITS;
+	if (allowsLimitsChange() && sym_->extra != "func" && display)
+		return LIMITS;
+	else
+		return NO_LIMITS;
 }
 
 
@@ -154,7 +156,7 @@ void InsetMathSymbol::mathematica(MathematicaStream & os) const
 }
 
 
-void InsetMathSymbol::mathmlize(MathStream & ms) const
+void InsetMathSymbol::mathmlize(MathMLStream & ms) const
 {
 	// FIXME We may need to do more interesting things
 	// with MathMLtype.
@@ -203,7 +205,7 @@ void InsetMathSymbol::octave(OctaveStream & os) const
 }
 
 
-void InsetMathSymbol::write(WriteStream & os) const
+void InsetMathSymbol::write(TeXMathStream & os) const
 {
 	unique_ptr<MathEnsurer> ensurer;
 	if (currentMode() != TEXT_MODE)

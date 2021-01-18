@@ -64,6 +64,15 @@ MathClass InsetMathDecoration::mathClass() const
 }
 
 
+Limits InsetMathDecoration::defaultLimits(bool display) const
+{
+	if (allowsLimitsChange() && display)
+		return LIMITS;
+	else
+		return NO_LIMITS;
+}
+
+
 bool InsetMathDecoration::protect() const
 {
 	return
@@ -137,7 +146,7 @@ void InsetMathDecoration::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathDecoration::write(WriteStream & os) const
+void InsetMathDecoration::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	if (os.fragile() && protect())
@@ -214,7 +223,7 @@ namespace {
 	}
 } // namespace
 
-void InsetMathDecoration::mathmlize(MathStream & ms) const
+void InsetMathDecoration::mathmlize(MathMLStream & ms) const
 {
 	TranslationMap const & t = translationMap();
 	TranslationMap::const_iterator cur = t.find(to_utf8(key_->name));

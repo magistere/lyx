@@ -28,7 +28,7 @@ public:
 	///
 	void draw(PainterInfo & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// write normalized content
 	void normalize(NormalStream & ns) const override;
 	///
@@ -36,7 +36,7 @@ public:
 	///
 	InsetCode lyxCode() const override { return MATH_CANCELTO_CODE; }
 	/// Nothing for now
-	void mathmlize(MathStream &) const override {}
+	void mathmlize(MathMLStream &) const override {}
 	/// Nothing for HTML
 	void htmlize(HtmlStream &) const override {}
 	///

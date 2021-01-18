@@ -1006,7 +1006,7 @@ int Buffer::readHeader(Lexer & lex)
 
 	params().shell_escape = theSession().shellescapeFiles().find(absFileName());
 
-	params().makeDocumentClass();
+	params().makeDocumentClass(isClone(), isInternal());
 
 	return unknown_tokens;
 }
@@ -1471,7 +1471,7 @@ bool Buffer::save() const
 	// proper location once that has been done successfully. that
 	// way we preserve the original file if something goes wrong.
 	string const justname = fileName().onlyFileNameWithoutExt();
-	auto tempfile = make_unique<TempFile>(fileName().onlyPath(),
+	auto tempfile = lyx::make_unique<TempFile>(fileName().onlyPath(),
 	                                      justname + "-XXXXXX.lyx");
 	bool const symlink = fileName().isSymLink();
 	if (!symlink)
@@ -1771,7 +1771,7 @@ Buffer::ExportStatus Buffer::makeLaTeXFile(FileName const & fname,
 	catch (EncodingException const & e) {
 		docstring const failed(1, e.failed_char);
 		ostringstream oss;
-		oss << "0x" << hex << e.failed_char << dec;
+		oss << "0x" << hex << static_cast<uint32_t>(e.failed_char) << dec;
 		if (getParFromID(e.par_id).paragraph().layout().pass_thru) {
 			docstring msg = bformat(_("Uncodable character '%1$s'"
 						  " (code point %2$s)"),
@@ -2137,7 +2137,7 @@ Buffer::ExportStatus Buffer::writeDocBookSource(odocstream & os,
 		// parsep in output_docbook.cpp).
 		os << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 		   << "<!-- This DocBook file was created by LyX " << lyx_version
-		   << "\n  See http://www.lyx.org/ for more information -->\n";
+		   << "\n  See https://www.lyx.org/ for more information -->\n";
 
 		// Directly output the root tag, based on the current type of document.
 		string languageCode = params().language->code();
@@ -4056,18 +4056,29 @@ unique_ptr<TexRow> Buffer::getSourceCode(odocstream & os, string const & format,
 	// Some macros rely on font encoding
 	runparams.main_fontenc = params().main_font_encoding();
 
+	// Use the right wrapping for the comment at the beginning of the generated
+	// snippet, so that it is either valid LaTeX or valid XML (including HTML and DocBook).
+	docstring comment_start = from_ascii("% ");
+	docstring comment_end = from_ascii("");
+	if (runparams.flavor == Flavor::Html || runparams.flavor == Flavor::DocBook5) {
+		comment_start = from_ascii("<!-- ");
+		comment_end = from_ascii(" -->");
+	}
+
 	if (output == CurrentParagraph) {
 		runparams.par_begin = par_begin;
 		runparams.par_end = par_end;
 		if (par_begin + 1 == par_end) {
-			os << "% "
+			os << comment_start
 			   << bformat(_("Preview source code for paragraph %1$d"), par_begin)
+			   << comment_end
 			   << "\n\n";
 		} else {
-			os << "% "
+			os << comment_start
 			   << bformat(_("Preview source code from paragraph %1$s to %2$s"),
 					convert<docstring>(par_begin),
 					convert<docstring>(par_end - 1))
+			   << comment_end
 			   << "\n\n";
 		}
 		// output paragraphs
@@ -4117,13 +4128,14 @@ unique_ptr<TexRow> Buffer::getSourceCode(odocstream & os, string const & format,
 				d->ignore_parent = false;
 		}
 	} else {
-		os << "% ";
+		os << comment_start;
 		if (output == FullSource)
 			os << _("Preview source code");
 		else if (output == OnlyPreamble)
 			os << _("Preview preamble");
 		else if (output == OnlyBody)
 			os << _("Preview body");
+		os << comment_end;
 		os << "\n\n";
 		if (runparams.flavor == Flavor::LyX) {
 			ostringstream ods;
@@ -4137,9 +4149,9 @@ unique_ptr<TexRow> Buffer::getSourceCode(odocstream & os, string const & format,
 		} else if (runparams.flavor == Flavor::Html) {
 			writeLyXHTMLSource(os, runparams, output);
 		} else if (runparams.flavor == Flavor::Text) {
-			if (output == OnlyPreamble) {
+			if (output == OnlyPreamble)
 				os << "% "<< _("Plain text does not have a preamble.");
-			} else
+			else
 				writePlaintextFile(*this, os, runparams);
 		} else if (runparams.flavor == Flavor::DocBook5) {
 			writeDocBookSource(os, runparams, output);
@@ -5353,6 +5365,12 @@ void Buffer::Impl::updateStatistics(DocIterator & from, DocIterator & to, bool s
 				}
 				else if (ins && ins->isSpace())
 					++blank_count_;
+				else if (ins) {
+					pair<int, int> words = ins->isWords();
+					char_count_ += words.first;
+					word_count_ += words.second;
+					inword = false;
+				}
 				else {
 					char_type const c = par.getChar(pos);
 					if (isPrintableNonspace(c))

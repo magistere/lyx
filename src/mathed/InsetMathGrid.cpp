@@ -1158,7 +1158,7 @@ void InsetMathGrid::normalize(NormalStream & os) const
 }
 
 
-void InsetMathGrid::mathmlize(MathStream & ms) const
+void InsetMathGrid::mathmlize(MathMLStream & ms) const
 {
 	bool const havetable = nrows() > 1 || ncols() > 1;
 	if (havetable)
@@ -1237,14 +1237,14 @@ void InsetMathGrid::validate(LaTeXFeatures & features) const
 }
 
 
-void InsetMathGrid::write(WriteStream & os) const
+void InsetMathGrid::write(TeXMathStream & os) const
 {
 	write(os, 0, 0, nrows(), ncols());
 }
 
-void InsetMathGrid::write(WriteStream & os,
-			  row_type beg_row, col_type beg_col,
-			  row_type end_row, col_type end_col) const
+void InsetMathGrid::write(TeXMathStream & os,
+                          row_type beg_row, col_type beg_col,
+                          row_type end_row, col_type end_col) const
 {
 	MathEnsurer ensurer(os, false);
 	docstring eol;
@@ -1258,7 +1258,7 @@ void InsetMathGrid::write(WriteStream & os,
 		for (col_type col = beg_col; col < end_col; ++col) {
 			idx_type const idx = index(row, col);
 			bool const empty_cell = cell(idx).empty();
-			if (!empty_cell || cellinfo_[idx].multi != CELL_NORMAL)
+			if (last_eoln && (!empty_cell || cellinfo_[idx].multi != CELL_NORMAL))
 				last_eoln = false;
 			if (!empty_cell || cellinfo_[idx].multi != CELL_NORMAL ||
 			    colinfo_[col + 1].lines) {
@@ -1269,7 +1269,7 @@ void InsetMathGrid::write(WriteStream & os,
 		for (col_type col = beg_col; col < end_col;) {
 			int nccols = 1;
 			idx_type const idx = index(row, col);
-			TexRow::RowEntry entry = TexRow::mathEntry(id(),idx);
+			TexRow::RowEntry const entry = TexRow::mathEntry(id(),idx);
 			os.texrow().start(entry);
 			if (col >= lastcol) {
 				++col;

@@ -4226,6 +4226,7 @@ bool InsetTableCell::getStatus(Cursor & cur, FuncRequest const & cmd,
 {
 	bool enabled = true;
 	switch (cmd.action()) {
+	case LFUN_INSET_SPLIT:
 	case LFUN_INSET_DISSOLVE:
 		enabled = false;
 		break;
@@ -5249,16 +5250,6 @@ void InsetTabular::doDispatch(Cursor & cur, FuncRequest & cmd)
 		if (cur.selIsMultiCell()) {
 			cur.recordUndoInset();
 			cutSelection(cur);
-		} else
-			cell(cur.idx())->dispatch(cur, cmd);
-		break;
-
-	case LFUN_COPY:
-		if (!cur.selection())
-			break;
-		if (cur.selIsMultiCell()) {
-			cur.finishUndo();
-			copySelection(cur);
 		} else
 			cell(cur.idx())->dispatch(cur, cmd);
 		break;

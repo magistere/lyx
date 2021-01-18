@@ -1370,6 +1370,14 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 		break;
 	}
 
+	case LFUN_INSET_SPLIT: {
+		if (splitInset(cur)) {
+			needsUpdate = true;
+			cur.forceBufferUpdate();
+		}
+		break;
+	}
+
 	case LFUN_GRAPHICS_SET_GROUP: {
 		InsetGraphics * ins = graphics::getCurrentGraphicsInset(cur);
 		if (!ins)
@@ -1540,11 +1548,6 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 		cur.message(_("Cut"));
 		break;
 
-	case LFUN_COPY:
-		copySelection(cur);
-		cur.message(_("Copy"));
-		break;
-
 	case LFUN_SERVER_GET_XY:
 		cur.message(from_utf8(
 			convert<string>(tm->cursorX(cur.top(), cur.boundary()))
@@ -1637,7 +1640,7 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 		if (para.layout().isEnvironment())
 			layout = para.layout().name();
 		depth_type split_depth = cur.paragraph().params().depth();
-		depth_type nextpar_depth = 0;
+		vector<depth_type> nextpars_depth;
 		if (outer || previous) {
 			// check if we have an environment in our scope
 			pit_type pit = cur.pit();
@@ -1662,9 +1665,20 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 			}
 		}
 		if ((outer || normal) && cur.pit() < cur.lastpit()) {
-			// save nesting of following paragraph
-			Paragraph cpar = pars_[cur.pit() + 1];
-			nextpar_depth = cpar.params().depth();
+			// save nesting of following paragraphs if they are deeper
+			// or same depth
+			pit_type offset = 1;
+			depth_type cur_depth = pars_[cur.pit()].params().depth();
+			while (cur.pit() + offset <= cur.lastpit()) {
+				Paragraph cpar = pars_[cur.pit() + offset];
+				depth_type nextpar_depth = cpar.params().depth();
+				if (cur_depth <= nextpar_depth && nextpar_depth > 0) {
+					nextpars_depth.push_back(nextpar_depth);
+					cur_depth = nextpar_depth;
+					++offset;
+				} else
+					break;
+			}
 		}
 		if (before)
 			cur.top().setPitPos(cur.pit(), 0);
@@ -1692,17 +1706,20 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 		else
 			lyx::dispatch(FuncRequest(LFUN_PARAGRAPH_BREAK, "inverse"));
 		lyx::dispatch(FuncRequest(LFUN_LAYOUT, layout));
-		if ((outer || normal) && nextpar_depth > 0) {
-			// restore nesting of following paragraph
+		if ((outer || normal) && !nextpars_depth.empty()) {
+			// restore nesting of following paragraphs
 			DocIterator scur = cur;
-			depth_type const max_depth = cur.paragraph().params().depth() + 1;
-			cur.forwardPar();
-			while (cur.paragraph().params().depth() < min(nextpar_depth, max_depth)) {
-				depth_type const olddepth = cur.paragraph().params().depth();
-				lyx::dispatch(FuncRequest(LFUN_DEPTH_INCREMENT));
-				if (olddepth == cur.paragraph().params().depth())
-					// leave loop if no incrementation happens
-					break;
+			depth_type max_depth = cur.paragraph().params().depth() + 1;
+			for (auto nextpar_depth : nextpars_depth) {
+				cur.forwardPar();
+				while (cur.paragraph().params().depth() < min(nextpar_depth, max_depth)) {
+					depth_type const olddepth = cur.paragraph().params().depth();
+					lyx::dispatch(FuncRequest(LFUN_DEPTH_INCREMENT));
+					if (olddepth == cur.paragraph().params().depth())
+						// leave loop if no incrementation happens
+						break;
+				}
+				max_depth = cur.paragraph().params().depth() + 1;
 			}
 			cur.setCursor(scur);
 		}
@@ -2143,7 +2160,6 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 				// Unknown style. Report and fall back to default.
 				cur.errorMessage(from_utf8(N_("Table Style ")) + from_utf8(tabstyle) +
 						     from_utf8(N_(" not known")));
-			
 		}
 		if (doInsertInset(cur, this, cmd, false, true))
 			cur.posForward();
@@ -2159,7 +2175,7 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 			break;
 		int const r = convert<int>(rows);
 		int const c = convert<int>(cols);
-			
+
 		string suffix;
 		if (r == 1)
 			suffix = "_1x1";
@@ -2253,7 +2269,7 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
 	case LFUN_NOMENCL_INSERT: {
 		InsetCommandParams p(NOMENCL_CODE);
 		if (cmd.argument().empty()) {
-			p["symbol"] = 
+			p["symbol"] =
 				bv->cursor().innerText()->getStringForDialog(bv->cursor());
 			cur.clearSelection();
 		} else
@@ -2898,7 +2914,7 @@ bool Text::getStatus(Cursor & cur, FuncRequest const & cmd,
 	bool enable = true;
 	bool allow_in_passthru = false;
 	InsetCode code = NO_CODE;
-	
+
 	switch (cmd.action()) {
 
 	case LFUN_DEPTH_DECREMENT:
@@ -3069,9 +3085,9 @@ bool Text::getStatus(Cursor & cur, FuncRequest const & cmd,
 		string s = cmd.getArg(0);
 		InsetLayout il =
 			cur.buffer()->params().documentClass().insetLayout(from_utf8(s));
-		if (il.lyxtype() != InsetLayout::CHARSTYLE &&
-		    il.lyxtype() != InsetLayout::CUSTOM &&
-		    il.lyxtype ()!= InsetLayout::STANDARD)
+		if (il.lyxtype() != InsetLyXType::CHARSTYLE &&
+		    il.lyxtype() != InsetLyXType::CUSTOM &&
+		    il.lyxtype ()!= InsetLyXType::STANDARD)
 			enable = false;
 		break;
 		}
@@ -3263,7 +3279,6 @@ bool Text::getStatus(Cursor & cur, FuncRequest const & cmd,
 		break;
 
 	case LFUN_CUT:
-	case LFUN_COPY:
 		enable = cur.selection();
 		break;
 

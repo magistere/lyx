@@ -169,7 +169,7 @@ public:
 	///
 	void mathematica(MathematicaStream & ms) const override { ms << mathMacro_->cell(idx_); }
 	///
-	void mathmlize(MathStream & ms) const override { ms << mathMacro_->cell(idx_); }
+	void mathmlize(MathMLStream & ms) const override { ms << mathMacro_->cell(idx_); }
 	///
 	void htmlize(HtmlStream & ms) const override { ms << mathMacro_->cell(idx_); }
 	///
@@ -398,14 +398,14 @@ bool InsetMathMacro::allowsLimitsChange() const
 }
 
 
-Limits InsetMathMacro::defaultLimits() const
+Limits InsetMathMacro::defaultLimits(bool display) const
 {
 	if (d->expanded_.empty())
 		return NO_LIMITS;
 	// Guess from the expanded macro
 	InsetMath const * in = d->expanded_.back().nucleus();
 	Limits const lim = in->limits() == AUTO_LIMITS
-		? in->defaultLimits() : in->limits();
+		? in->defaultLimits(display) : in->limits();
 	LATTEST(lim != AUTO_LIMITS);
 	return lim;
 }
@@ -1133,7 +1133,7 @@ bool InsetMathMacro::folded() const
 }
 
 
-void InsetMathMacro::write(WriteStream & os) const
+void InsetMathMacro::write(TeXMathStream & os) const
 {
 	mode_type mode = currentMode();
 	MathEnsurer ensurer(os, mode == MATH_MODE, true, mode == TEXT_MODE);
@@ -1214,8 +1214,11 @@ void InsetMathMacro::write(WriteStream & os) const
 	}
 
 	// add space if there was no argument
-	if (first)
+	// or add braces if we have optionals but none are present and [ follows
+	if (first) {
 		os.pendingSpace(true);
+		os.useBraces(d->optionals_ > 0);
+	}
 
 	// write \(no)limits modifiers if relevant
 	writeLimits(os);
@@ -1240,7 +1243,7 @@ void InsetMathMacro::mathematica(MathematicaStream & os) const
 }
 
 
-void InsetMathMacro::mathmlize(MathStream & ms) const
+void InsetMathMacro::mathmlize(MathMLStream & ms) const
 {
 	// macro_ is 0 if this is an unknown macro
 	LATTEST(d->macro_ || d->displayMode_ != DISPLAY_NORMAL);

@@ -19,12 +19,14 @@
 #include "FancyLineEdit.h"
 #include "GuiApplication.h"
 #include "GuiSelectionManager.h"
+#include "GuiView.h"
 #include "qt_helpers.h"
 
 #include "Buffer.h"
 #include "BufferView.h"
 #include "BufferParams.h"
 #include "Citation.h"
+#include "Cursor.h"
 #include "TextClass.h"
 #include "FuncRequest.h"
 
@@ -157,7 +159,7 @@ GuiCitation::GuiCitation(GuiView & lv)
 	        availableLV, SLOT(setFocus()));
 #else
 	connect(filter_, &FancyLineEdit::downPressed,
-	        availableLV, [=](){ focusAndHighlight(availableLV); });
+	        availableLV, [this](){ focusAndHighlight(availableLV); });
 #endif
 	connect(regexp_, SIGNAL(triggered()),
 		this, SLOT(regexChanged()));
@@ -196,6 +198,7 @@ void GuiCitation::applyView()
 	QString const after = textAfterED->text();
 
 	applyParams(choice, full, force, before, after);
+	connectToNewInset();
 }
 
 

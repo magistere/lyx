@@ -158,8 +158,8 @@ GuiGraphics::GuiGraphics(GuiView & lv)
 	scaleValidator->setBottom(0);
 	scaleValidator->setDecimals(256); //I guess that will do
 	Scale->setValidator(scaleValidator);
-	Height->setValidator(unsignedLengthAutoValidator(Height, qt_(autostr)));
-	Width->setValidator(unsignedLengthAutoValidator(Width, qt_(autostr)));
+	Height->setValidator(positiveLengthAutoValidator(Height, qt_(autostr)));
+	Width->setValidator(positiveLengthAutoValidator(Width, qt_(autostr)));
 	angle->setValidator(new QDoubleValidator(-360, 360, 2, angle));
 
 	//clipping pane
@@ -770,6 +770,7 @@ void GuiGraphics::dispatchParams()
 	InsetGraphicsParams tmp_params(params_);
 	string const lfun = InsetGraphics::params2string(tmp_params, buffer());
 	dispatch(FuncRequest(getLfun(), lfun));
+	connectToNewInset();
 }
 
 

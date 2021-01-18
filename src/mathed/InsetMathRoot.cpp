@@ -132,7 +132,7 @@ void InsetMathRoot::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathRoot::write(WriteStream & os) const
+void InsetMathRoot::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	os << "\\sqrt[" << cell(1) << "]{" << cell(0) << '}';
@@ -216,7 +216,7 @@ void InsetMathRoot::octave(OctaveStream & os) const
 }
 
 
-void InsetMathRoot::mathmlize(MathStream & ms) const
+void InsetMathRoot::mathmlize(MathMLStream & ms) const
 {
 	ms << MTag("mroot") << cell(0) << cell(1) << ETag("mroot");
 }

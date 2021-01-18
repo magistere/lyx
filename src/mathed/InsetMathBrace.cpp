@@ -72,7 +72,7 @@ void InsetMathBrace::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathBrace::write(WriteStream & os) const
+void InsetMathBrace::write(TeXMathStream & os) const
 {
 	os << '{' << cell(0) << '}';
 }
@@ -96,7 +96,7 @@ void InsetMathBrace::octave(OctaveStream & os) const
 }
 
 
-void InsetMathBrace::mathmlize(MathStream & ms) const
+void InsetMathBrace::mathmlize(MathMLStream & ms) const
 {
 	ms << MTag("mrow") << cell(0) << ETag("mrow");
 }

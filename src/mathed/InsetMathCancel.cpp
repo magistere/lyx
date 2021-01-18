@@ -77,7 +77,7 @@ void InsetMathCancel::draw(PainterInfo & pi, int x, int y) const
 }
 
 
-void InsetMathCancel::write(WriteStream & os) const
+void InsetMathCancel::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os);
 	switch (kind_) {
@@ -138,7 +138,7 @@ void InsetMathCancel::htmlize(HtmlStream & os) const
 }
 
 
-void InsetMathCancel::mathmlize(MathStream & ms) const
+void InsetMathCancel::mathmlize(MathMLStream & ms) const
 {
 	switch (kind_) {
 	case cancel:

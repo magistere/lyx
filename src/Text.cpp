@@ -29,11 +29,11 @@
 #include "Cursor.h"
 #include "CursorSlice.h"
 #include "CutAndPaste.h"
-#include "DispatchResult.h"
 #include "Encoding.h"
 #include "ErrorList.h"
 #include "factory.h"
 #include "Font.h"
+#include "FuncRequest.h"
 #include "Language.h"
 #include "Layout.h"
 #include "Lexer.h"
@@ -43,7 +43,6 @@
 #include "ParagraphParameters.h"
 #include "TextClass.h"
 #include "TextMetrics.h"
-#include "Undo.h"
 #include "WordList.h"
 
 #include "insets/Inset.h"
@@ -1870,9 +1869,15 @@ bool Text::dissolveInset(Cursor & cur)
 		 */
 		DocumentClass const & tclass = cur.buffer()->params().documentClass();
 		if (inset_it.lastpos() == 1
-			&& !tclass.isPlainLayout(plist[0].layout())
-			&& !tclass.isDefaultLayout(plist[0].layout()))
-			cur.paragraph().makeSameLayout(plist[0]);
+		    && !tclass.isPlainLayout(plist[0].layout())
+		    && !tclass.isDefaultLayout(plist[0].layout())) {
+			// Copy all parameters except depth.
+			Paragraph & par = cur.paragraph();
+			par.setLayout(plist[0].layout());
+			depth_type const dpth = par.getDepth();
+			par.params() = plist[0].params();
+			par.params().depth(dpth);
+		}
 
 		pasteParagraphList(cur, plist, b.params().documentClassPtr(),
 				   b.errorList("Paste"));
@@ -1890,6 +1895,88 @@ bool Text::dissolveInset(Cursor & cur)
 	cur.resetAnchor();
 	cur.forceBufferUpdate();
 
+	return true;
+}
+
+
+bool Text::splitInset(Cursor & cur)
+{
+	LASSERT(this == cur.text(), return false);
+
+	if (isMainText() || cur.inset().nargs() != 1)
+		return false;
+
+	cur.recordUndo();
+	if (cur.selection()) {
+		// start from selection begin
+		setCursor(cur, cur.selBegin().pit(), cur.selBegin().pos());
+		cur.clearSelection();
+	}
+	// save split position inside inset
+	// (we need to copy the whole inset first)
+	pos_type spos = cur.pos();
+	pit_type spit = cur.pit();
+	// some things only need to be done if the inset has content
+	bool const inset_non_empty = cur.lastpit() != 0 || cur.lastpos() != 0;
+
+	// move right before the inset
+	cur.popBackward();
+	cur.resetAnchor();
+	// remember position outside inset
+	pos_type ipos = cur.pos();
+	pit_type ipit = cur.pit();
+	// select inset ...
+	++cur.pos();
+	cur.setSelection();
+	// ... and copy
+	cap::copySelectionToTemp(cur);
+	cur.clearSelection();
+	cur.resetAnchor();
+	// paste copied inset
+	cap::pasteFromTemp(cur, cur.buffer()->errorList("Paste"));
+	cur.forceBufferUpdate();
+
+	// if the inset has text, cut after split position
+	// and paste to new inset
+	if (inset_non_empty) {
+		// go back to first inset
+		cur.text()->setCursor(cur, ipit, ipos);
+		cur.forwardPos();
+		setCursor(cur, spit, spos);
+		cur.resetAnchor();
+		setCursor(cur, cur.lastpit(), getPar(cur.lastpit()).size());
+		cur.setSelection();
+		cap::cutSelectionToTemp(cur);
+		cur.setMark(false);
+		cur.selHandle(false);
+		cur.resetAnchor();
+		bool atlastpos = false;
+		if (cur.pos() == 0 && cur.pit() > 0) {
+			// if we are at par start, remove this par
+			cur.text()->backspace(cur);
+			cur.forceBufferUpdate();
+		} else if (cur.pos() == cur.lastpos())
+			atlastpos = true;
+		// Move out of and jump over inset
+		cur.popBackward();
+		++cur.pos();
+
+		// enter new inset
+		cur.forwardPos();
+		cur.setCursor(cur);
+		cur.resetAnchor();
+		cur.text()->selectAll(cur);
+		cutSelection(cur, false);
+		cap::pasteFromTemp(cur, cur.buffer()->errorList("Paste"));
+		cur.text()->setCursor(cur, 0, 0);
+		if (atlastpos && cur.paragraph().isFreeSpacing() && cur.paragraph().empty()) {
+			// We started from par end, remove extra empty par in free spacing insets
+			cur.text()->erase(cur);
+			cur.forceBufferUpdate();
+		}
+	}
+
+	cur.finishUndo();
 	return true;
 }
 
@@ -2044,7 +2131,7 @@ docstring Text::currentState(CursorData const & cur, bool devel_mode) const
 
 	// Custom text style
 	InsetLayout const & layout = cur.inset().getLayout();
-	if (layout.lyxtype() == InsetLayout::CHARSTYLE)
+	if (layout.lyxtype() == InsetLyXType::CHARSTYLE)
 		os << _(", Style: ") << translateIfPossible(layout.labelstring());
 
 	if (devel_mode) {

@@ -549,7 +549,7 @@ void getArgInsets(otexstream & os, OutputParams const & runparams, Layout::LaTeX
 			}
 		}
 	}
-	if (runparams.for_search) {
+	if (runparams.for_search && argnr > 1) {
 		// Mark end of arguments for findadv() only
 		os << "\\endarguments{}";
 	}
@@ -1666,6 +1666,15 @@ void latexParagraphs(Buffer const & buf,
 			     || par->params().depth() == nextpar->params().depth()
 			     || par->params().leftIndent() == nextpar->params().leftIndent())
 			    && !runparams.for_search && !cpar.empty()
+			    && cpar.isDeleted(0, cpar.size()) && !bparams.output_changes) {
+				if (!cpar.parEndChange().deleted())
+					os << '\n' << '\n';
+				continue;
+			}
+		} else {
+			// This is the last par
+			Paragraph const & cpar = paragraphs.at(pit);
+			if (!runparams.for_search && !cpar.empty()
 			    && cpar.isDeleted(0, cpar.size()) && !bparams.output_changes) {
 				if (!cpar.parEndChange().deleted())
 					os << '\n' << '\n';

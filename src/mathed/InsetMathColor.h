@@ -35,9 +35,9 @@ public:
 	/// we need package color
 	void validate(LaTeXFeatures & features) const override;
 	///
-	void write(WriteStream & os) const override;
+	void write(TeXMathStream & os) const override;
 	/// FIXME XHTML For now, we do nothing with color.
-	void mathmlize(MathStream &) const override {}
+	void mathmlize(MathMLStream &) const override {}
 	/// FIXME XHTML For now, we do nothing with color.
 	void htmlize(HtmlStream &) const override {}
 	///

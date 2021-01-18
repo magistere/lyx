@@ -23,9 +23,9 @@
 # - Case (by inclusion)
 
 
-Format 89
+Format 90
 
-Input theorem-counters-bytype.inc
+Input theorems-counters-bytype.inc
 
 Counter theorem
 	Within chapter

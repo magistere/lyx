@@ -45,6 +45,10 @@ debinddir = $(pkgdatadir)/bind/de
 dist_debind_DATA = \
 	bind/de/menus.bind
 
+rubinddir = $(pkgdatadir)/bind/ru
+dist_rubind_DATA = \
+	bind/ru/menus.bind
+
 binddir = $(pkgdatadir)/bind
 dist_bind_DATA = \
 	bind/broadway.bind \
@@ -2463,6 +2467,8 @@ dist_layouts_DATA =\
 	layouts/theorems-ams-extended-chap-bytype.module \
 	layouts/theorems-case.inc \
 	layouts/theorems-chap.module \
+	layouts/theorems-counters-bytype.inc \
+	layouts/theorems-counters-extended-bytype.inc \
 	layouts/theorems.inc \
 	layouts/theorems-bytype.inc \
 	layouts/theorems-bytype.module \
@@ -2570,6 +2576,10 @@ dist_articletemplates_DATA = \
 	templates/Articles/REVTeX_%28V._4%29.lyx \
 	templates/Articles/REVTeX_%28V._4.1%29.lyx \
 	templates/Articles/Springers_Global_Journal_Template_%28V._3%29.lyx
+
+arpresentationtemplatesdir = $(pkgdatadir)/templates/ar/Presentations
+dist_arpresentationtemplates_DATA = \
+	templates/ar/Presentations/Beamer.lyx
 
 depresentationtemplatesdir = $(pkgdatadir)/templates/de/Presentations
 dist_depresentationtemplates_DATA = \
@@ -2707,6 +2717,7 @@ endif
 dist_noinst_DATA += lyx.desktop.in images/lyx.png
 
 exampleandtemplate_files = \
+			   $(dist_arpresentationexamples_DATA) \
 			   $(dist_articleexamples_DATA) \
 			   $(dist_articlechessexamples_DATA) \
 			   $(dist_articletemplates_DATA) \

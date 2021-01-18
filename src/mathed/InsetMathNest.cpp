@@ -255,7 +255,7 @@ void InsetMathNest::dump() const
 {
 	odocstringstream oss;
 	otexrowstream ots(oss);
-	WriteStream os(ots);
+	TeXMathStream os(ots);
 	os << "---------------------------------------------\n";
 	write(os);
 	os << "\n";
@@ -326,7 +326,7 @@ MathData InsetMathNest::glue() const
 }
 
 
-void InsetMathNest::write(WriteStream & os) const
+void InsetMathNest::write(TeXMathStream & os) const
 {
 	MathEnsurer ensurer(os, currentMode() == MATH_MODE);
 	ModeSpecifier specifier(os, currentMode(), lockedMode());
@@ -358,16 +358,16 @@ void InsetMathNest::normalize(NormalStream & os) const
 
 void InsetMathNest::latex(otexstream & os, OutputParams const & runparams) const
 {
-	WriteStream wi(os, runparams.moving_arg, true,
-			runparams.dryrun ? WriteStream::wsDryrun : WriteStream::wsDefault,
-			runparams.encoding);
+	TeXMathStream wi(os, runparams.moving_arg, true,
+	                 runparams.dryrun ? TeXMathStream::wsDryrun : TeXMathStream::wsDefault,
+	                 runparams.encoding);
 	wi.strikeoutMath(runparams.inDeletedInset);
 	if (runparams.inulemcmd) {
-		wi.ulemCmd(WriteStream::UNDERLINE);
+		wi.ulemCmd(TeXMathStream::UNDERLINE);
 		if (runparams.local_font) {
 			FontInfo f = runparams.local_font->fontInfo();
 			if (f.strikeout() == FONT_ON)
-				wi.ulemCmd(WriteStream::STRIKEOUT);
+				wi.ulemCmd(TeXMathStream::STRIKEOUT);
 		}
 	}
 	wi.canBreakLine(os.canBreakLine());
@@ -450,8 +450,8 @@ void InsetMathNest::handleNest(Cursor & cur, MathAtom const & nest)
 void InsetMathNest::handleNest(Cursor & cur, MathAtom const & nest,
 	docstring const & arg)
 {
-	CursorSlice i1 = cur.selBegin();
-	CursorSlice i2 = cur.selEnd();
+	DocIterator const i1 = cur.selectionBegin();
+	DocIterator const i2 = cur.selectionEnd();
 	if (!i1.inset().asInsetMath())
 		return;
 	if (i1.idx() == i2.idx()) {
@@ -462,8 +462,9 @@ void InsetMathNest::handleNest(Cursor & cur, MathAtom const & nest,
 	}
 
 	// multiple selected cells in a simple non-grid inset
-	if (i1.asInsetMath()->nrows() == 0 || i1.asInsetMath()->ncols() == 0) {
+	if (i1.inset().nrows() == 0 || i1.inset().ncols() == 0) {
 		for (idx_type i = i1.idx(); i <= i2.idx(); ++i) {
+			cur.setCursor(i1);
 			// select cell
 			cur.idx() = i;
 			cur.pos() = 0;
@@ -471,14 +472,9 @@ void InsetMathNest::handleNest(Cursor & cur, MathAtom const & nest,
 			cur.pos() = cur.lastpos();
 			cur.setSelection();
 
-			// change font of cell
+			// do the real job
 			cur.handleNest(nest);
 			cur.insert(arg);
-
-			// cur is in the font inset now. If the loop continues,
-			// we need to get outside again for the next cell
-			if (i + 1 <= i2.idx())
-				cur.pop_back();
 		}
 		return;
 	}
@@ -486,24 +482,20 @@ void InsetMathNest::handleNest(Cursor & cur, MathAtom const & nest,
 	// the complicated case with multiple selected cells in a grid
 	row_type r1, r2;
 	col_type c1, c2;
-	cap::region(i1, i2, r1, r2, c1, c2);
+	cap::region(i1.top(), i2.top(), r1, r2, c1, c2);
 	for (row_type row = r1; row <= r2; ++row) {
 		for (col_type col = c1; col <= c2; ++col) {
+			cur.setCursor(i1);
 			// select cell
-			cur.idx() = i1.asInsetMath()->index(row, col);
+			cur.idx() = i1.inset().index(row, col);
 			cur.pos() = 0;
 			cur.resetAnchor();
 			cur.pos() = cur.lastpos();
 			cur.setSelection();
 
-			//
+			// do the real job
 			cur.handleNest(nest);
 			cur.insert(arg);
-
-			// cur is in the font inset now. If the loop continues,
-			// we need to get outside again for the next cell
-			if (col + 1 <= c2 || row + 1 <= r2)
-				cur.pop_back();
 		}
 	}
 }
@@ -564,11 +556,6 @@ void InsetMathNest::doDispatch(Cursor & cur, FuncRequest & cmd)
 		// Probably not necessary anymore, see eraseSelection (gb 2005-10-09)
 		cur.normalize();
 		cur.forceBufferUpdate();
-		break;
-
-	case LFUN_COPY:
-		copySelection(cur);
-		cur.message(_("Copy"));
 		break;
 
 	case LFUN_MOUSE_PRESS:
@@ -911,7 +898,7 @@ void InsetMathNest::doDispatch(Cursor & cur, FuncRequest & cmd)
 		if (cmd.argument().empty()) {
 			// do superscript if LyX handles
 			// deadkeys
-			cur.recordUndoSelection();
+			cur.recordUndoInset();
 			script(cur, true, grabAndEraseSelection(cur));
 		}
 		break;
@@ -1299,11 +1286,31 @@ void InsetMathNest::doDispatch(Cursor & cur, FuncRequest & cmd)
 				in->limits(NO_LIMITS);
 			else
 				in->limits(AUTO_LIMITS);
-		} else if (in->limits() == AUTO_LIMITS)
-			in->limits(in->defaultLimits() == LIMITS ? NO_LIMITS : LIMITS);
-		else
+		} else if (in->limits() != AUTO_LIMITS)
 			in->limits(AUTO_LIMITS);
+		else if (in->defaultLimits(cur.cell().displayStyle()) == LIMITS)
+			in->limits(NO_LIMITS);
+		else
+			in->limits(LIMITS);
 		return;
+	}
+
+	case LFUN_PHANTOM_INSERT: {
+		docstring const & arg = cmd.argument();
+		docstring newarg;
+		if (arg == "Phantom")
+			newarg = from_ascii("\\phantom");
+		else if (arg == "HPhantom")
+			newarg = from_ascii("\\hphantom");
+		else if (arg == "VPhantom")
+			newarg = from_ascii("\\vphantom");
+		if (newarg.empty())
+			LYXERR0("Unknown phantom type " + newarg);
+		else {
+			FuncRequest const newfunc(LFUN_MATH_INSERT, newarg);
+			lyx::dispatch(newfunc);
+		}
+		break;
 	}
 
 	default:
@@ -1867,10 +1874,12 @@ bool InsetMathNest::interpretChar(Cursor & cur, char_type const c)
 		return true;
 	} else if (currentMode() != InsetMath::TEXT_MODE) {
 		if (c == '_') {
+			cur.recordUndoInset();
 			script(cur, false, save_selection);
 			return true;
 		}
 		if (c == '^') {
+			cur.recordUndoInset();
 			script(cur, true, save_selection);
 			return true;
 		}

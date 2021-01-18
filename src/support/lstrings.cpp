@@ -543,6 +543,14 @@ docstring const uppercase(docstring const & a)
 }
 
 
+docstring capitalize(docstring const & s) {
+	docstring ret = s;
+	char_type t = uppercase(ret[0]);
+	ret[0] = t;
+	return ret;
+}
+
+
 string const ascii_lowercase(string const & a)
 {
 	string tmp(a);
@@ -965,6 +973,21 @@ int count_char(docstring const & str, docstring::value_type chr)
 			count++;
 	return count;
 }
+
+
+int wordCount(docstring const & d)
+{
+	docstring dt = trim(d);
+	if (dt.empty())
+		return 0;
+	int words = 1;
+	for (auto const & c : dt) {
+		if (isSpace(c))
+			words++;
+	}
+	return words;
+}
+
 
 
 int count_bin_chars(string const & str)

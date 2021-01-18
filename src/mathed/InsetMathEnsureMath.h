@@ -13,14 +13,14 @@
 #ifndef MATH_ENSUREMATHINSET_H
 #define MATH_ENSUREMATHINSET_H
 
-#include "InsetMathNest.h"
+#include "InsetMathGrid.h"
 
 
 namespace lyx {
 
 
 /// Inset for ensuring math mode
-class InsetMathEnsureMath : public InsetMathNest {
+class InsetMathEnsureMath : public InsetMathGrid {
 public:
 	explicit InsetMathEnsureMath(Buffer * buf);
 	///
@@ -34,9 +34,25 @@ public:
 	///
 	void drawT(TextPainter & pi, int x, int y) const override;
 	///
-	void write(WriteStream & os) const override;
+	void addRow(row_type) override {}
 	///
-	void mathmlize(MathStream &) const override;
+	void delRow(row_type) override {}
+	///
+	void swapRow(row_type) override {}
+	///
+	void addCol(col_type) override {}
+	///
+	void delCol(col_type) override {}
+	///
+	docstring eolString(row_type, bool, bool, bool) const override
+	{ return docstring(); }
+	///
+	docstring eocString(col_type, col_type) const override
+	{ return docstring(); }
+	///
+	void write(TeXMathStream & os) const override;
+	///
+	void mathmlize(MathMLStream &) const override;
 	///
 	void htmlize(HtmlStream &) const override;
 	///

@@ -2240,8 +2240,10 @@ bool BufferParams::writeLaTeX(otexstream & os, LaTeXFeatures & features,
 	// use \PassOptionsToPackage here because the user could have
 	// already loaded subfig in the preamble.
 	if (features.mustProvide("subfig"))
-		atlyxpreamble << "\\@ifundefined{showcaptionsetup}{}{%\n"
-		                 " \\PassOptionsToPackage{caption=false}{subfig}}\n"
+		atlyxpreamble << "\\ifdefined\\showcaptionsetup\n"
+		                 " % Caption package is used. Advise subfig not to load it again.\n"
+		                 " \\PassOptionsToPackage{caption=false}{subfig}\n"
+		                 "\\fi\n"
 		                 "\\usepackage{subfig}\n";
 
 	// Itemize bullet settings need to be last in case the user
@@ -2565,7 +2567,7 @@ LayoutFileIndex const & BufferParams::baseClassID() const
 }
 
 
-void BufferParams::makeDocumentClass(bool const clone)
+void BufferParams::makeDocumentClass(bool clone, bool internal)
 {
 	if (!baseClass())
 		return;
@@ -2575,7 +2577,7 @@ void BufferParams::makeDocumentClass(bool const clone)
 	for (auto const & mod : layout_modules_)
 		mods.push_back(mod);
 
-	doc_class_ = getDocumentClass(*baseClass(), mods, cite_engine_, clone);
+	doc_class_ = getDocumentClass(*baseClass(), mods, cite_engine_, clone, internal);
 
 	TextClass::ReturnValues success = TextClass::OK;
 	if (!forced_local_layout_.empty())
@@ -3452,7 +3454,7 @@ string const BufferParams::loadFonts(LaTeXFeatures & features) const
 	bool const ot1 = (main_font_encoding() == "default" || main_font_encoding() == "OT1");
 	bool const dryrun = features.runparams().dryrun;
 	bool const complete = (fontsSans() == "default" && fontsTypewriter() == "default");
-	bool const nomath = (fontsMath() == "default");
+	bool const nomath = (fontsMath() != "auto");
 
 	// ROMAN FONTS
 	os << theLaTeXFonts().getLaTeXFont(from_ascii(fontsRoman())).getLaTeXCode(
