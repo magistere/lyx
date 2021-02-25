@@ -1901,6 +1901,16 @@ void LyXAction::init()
 		{ LFUN_HELP_OPEN, "help-open", NoBuffer | Argument, Buffer },
 
 /*!
+ * \var lyx::FuncCode lyx::LFUN_LYXFILES_OPEN
+ * \li Action: Open lyxfiles (templates/examples). Create a view if he have none.
+ * \li Syntax: lyxfiles-open [<TYPE>]
+ * \li Params: <TYPE>: templates or examples. Default is templates.
+ * \li Origin: spitz, 10 Feb 2021
+ * \endvar
+ */
+		{ LFUN_LYXFILES_OPEN, "lyxfiles-open", NoBuffer | Argument, Buffer },
+
+/*!
  * \var lyx::FuncCode lyx::LFUN_HREF_INSERT
  * \li Action: Inserts hyperlinks into the document (clickable in pdf output).
  * \li Notion: Hyperlink target can be set via selection + hyperlink-insert function.
@@ -3473,7 +3483,7 @@ void LyXAction::init()
  * \var lyx::FuncCode lyx::LFUN_SEARCH_IGNORE
  * \li Action: Enables/disables searching for features in findadv
  * \li Syntax: search-ignore <type> <value>
- * \li Params: <type>: language|color|sectioning|font|series|shape|family|markup|underline|strike
+ * \li Params: <type>: language|color|sectioning|font|series|shape|family|markup|underline|strike|deleted
  * \li Params: <value>: true|false
  * \endvar
  */
@@ -4335,6 +4345,17 @@ void LyXAction::init()
  * \endvar
  */
 		{ LFUN_WORD_FIND, "word-find", ReadOnly, Edit },
+
+/*! 
+ * \var lyx::FuncCode lyx::LFUN_SEARCH_STRING_SET
+ * \li Action: Set search string buffer.
+ * \li Syntax: search-string-set [<DATA>] 
+ * \li Params: <DATA>: string to search for. If no parameter is given,
+ *                     use (word under) selection.
+ * \li Origin: stwitt, spitz, Feb 12 2021 
+ * \endvar 
+ */ 
+		{ LFUN_SEARCH_STRING_SET, "search-string-set", ReadOnly, Edit }, 
 
 /*!
  * \var lyx::FuncCode lyx::LFUN_WORD_FINDADV

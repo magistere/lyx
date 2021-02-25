@@ -266,7 +266,10 @@ void GuiThesaurus::replace(docstring const & newstr)
 				     true,  // case sensitive
 				     true,  // match word
 				     false, // all words
-				     true); // forward
+				     true,  // forward
+				     false,  // find next
+				     false,  // auto-wrap
+				     false); // only selection
 	dispatch(FuncRequest(LFUN_WORD_REPLACE, sdata));
 }
 

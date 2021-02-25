@@ -59,7 +59,7 @@ namespace lyx {
 // You should also run the development/tools/updatelayouts.py script,
 // to update the format of all of our layout files.
 //
-int const LAYOUT_FORMAT = 90; // spitz: semantic label colors
+int const LAYOUT_FORMAT = 93; // tcuvelier: DocBookNoFontInside
 
 
 // Layout format for the current lyx file format. Controls which format is
@@ -165,11 +165,14 @@ enum TextClassTags {
 	TC_OUTPUTTYPE = 1,
 	TC_OUTPUTFORMAT,
 	TC_INPUT,
+	TC_INPUT_GLOBAL,
 	TC_STYLE,
 	TC_MODIFYSTYLE,
 	TC_PROVIDESTYLE,
 	TC_DEFAULTSTYLE,
 	TC_INSETLAYOUT,
+	TC_MODIFYINSETLAYOUT,
+	TC_PROVIDEINSETLAYOUT,
 	TC_NOINSETLAYOUT,
 	TC_NOSTYLE,
 	TC_COLUMNS,
@@ -249,9 +252,11 @@ LexerKeyword textClassTags[] = {
 	{ "htmltocsection",    TC_HTMLTOCSECTION },
 	{ "ifcounter",         TC_IFCOUNTER },
 	{ "input",             TC_INPUT },
+	{ "inputglobal",       TC_INPUT_GLOBAL },
 	{ "insetlayout",       TC_INSETLAYOUT },
 	{ "leftmargin",        TC_LEFTMARGIN },
 	{ "maxcitenames",      TC_MAXCITENAMES },
+	{ "modifyinsetlayout", TC_MODIFYINSETLAYOUT },
 	{ "modifystyle",       TC_MODIFYSTYLE },
 	{ "nocounter",         TC_NOCOUNTER },
 	{ "nofloat",           TC_NOFLOAT },
@@ -264,6 +269,7 @@ LexerKeyword textClassTags[] = {
 	{ "pagesize",          TC_PAGESIZE },
 	{ "pagestyle",         TC_PAGESTYLE },
 	{ "preamble",          TC_PREAMBLE },
+	{ "provideinsetlayout", TC_PROVIDEINSETLAYOUT },
 	{ "provides",          TC_PROVIDES },
 	{ "providesmodule",    TC_PROVIDESMODULE },
 	{ "providestyle",      TC_PROVIDESTYLE },
@@ -429,9 +435,10 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 		}
 
 		// used below to track whether we are in an IfStyle or IfCounter tag.
-		bool modifystyle  = false;
-		bool providestyle = false;
+		bool modify  = false;
+		bool provide = false;
 		bool ifcounter    = false;
+		bool only_global  = false;
 
 		switch (static_cast<TextClassTags>(le)) {
 
@@ -459,6 +466,9 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 			}
 			break;
 
+		case TC_INPUT_GLOBAL:
+			only_global = true;
+		// fall through
 		case TC_INPUT: // Include file
 			if (lexrc.next()) {
 				FileName tmp;
@@ -466,9 +476,13 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 				if (!path().empty() && (prefixIs(inc, "./") ||
 							prefixIs(inc, "../")))
 					tmp = fileSearch(path(), inc, "layout");
-				else
+				else {
+					// InputGlobal only searches in the system and
+					// build directories. This allows to reuse and
+					// modify files in the user directory.
 					tmp = libFileSearch("layouts", inc,
-							    "layout");
+							    "layout", must_exist, only_global);
+				}
 
 				if (tmp.empty()) {
 					lexrc.printError("Could not find input file: " + inc);
@@ -489,13 +503,13 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 			break;
 
 		case TC_MODIFYSTYLE:
-			modifystyle = true;
+			modify = true;
 		// fall through
 		case TC_PROVIDESTYLE:
 			// if modifystyle is true, then we got here by falling through
 			// so we are not in an ProvideStyle block
-			if (!modifystyle)
-				providestyle = true;
+			if (!modify)
+				provide = true;
 		// fall through
 		case TC_STYLE: {
 			if (!lexrc.next()) {
@@ -521,13 +535,13 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 			// If the layout already exists, then we want to add it to
 			// the existing layout, as long as we are not in an ProvideStyle
 			// block.
-			if (have_layout && !providestyle) {
+			if (have_layout && !provide) {
 				Layout & lay = operator[](name);
 				error = !readStyle(lexrc, lay, rt);
 			}
 			// If the layout does not exist, then we want to create a new
 			// one, but not if we are in a ModifyStyle block.
-			else if (!have_layout && !modifystyle) {
+			else if (!have_layout && !modify) {
 				Layout layout;
 				layout.setName(name);
 				error = !readStyle(lexrc, layout, rt);
@@ -722,6 +736,15 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 				rightmargin_ = lexrc.getDocString();
 			break;
 
+		case TC_MODIFYINSETLAYOUT:
+			modify = true;
+		// fall through
+		case TC_PROVIDEINSETLAYOUT:
+			// if modifyinsetlayout is true, then we got here by falling through
+			// so we are not in an ProvideInsetLayout block
+			if (!modify)
+				provide = true;
+		// fall through
 		case TC_INSETLAYOUT: {
 			if (!lexrc.next()) {
 				lexrc.printError("No name given for InsetLayout: `$$Token'.");
@@ -730,6 +753,7 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 			}
 			docstring const name = subst(lexrc.getDocString(), '_', ' ');
 			bool const validating = (rt == VALIDATION);
+			bool const have_layout = name.empty() ? false : hasInsetLayout(name);
 			if (name.empty()) {
 				string s = "Could not read name for InsetLayout: `$$Token' "
 					+ lexrc.getString() + " is probably not valid UTF-8!";
@@ -742,15 +766,19 @@ TextClass::ReturnValues TextClass::read(Lexer & lexrc, ReadType rt)
 				// in which case we want to report the error
 				if (validating)
 					error = true;
-			} else if (hasInsetLayout(name)) {
+			} else if (have_layout && !provide) {
 				InsetLayout & il = insetlayoutlist_[name];
 				error = !il.read(lexrc, *this, validating);
-			} else {
+			} else if (!modify && !have_layout) {
 				InsetLayout il;
 				il.setName(name);
 				error = !il.read(lexrc, *this, validating);
 				if (!error)
 					insetlayoutlist_[name] = il;
+			} else {
+				InsetLayout il;
+				// We just scan the rest of the style and discard it.
+				il.read(lexrc, *this);
 			}
 			break;
 		}
@@ -1721,7 +1749,7 @@ bool TextClass::load(string const & path) const
 		       << to_utf8(makeDisplayPath(layout_file.absFileName()))
 		       << "'\n(Check `" << name_
 		       << "')\nCheck your installation and "
-		          "try Options/Reconfigure..."
+		          "try Tools/Reconfigure..."
 		       << endl;
 	}
 

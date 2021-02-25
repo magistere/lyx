@@ -21,6 +21,7 @@
 #include "BufferParams.h"
 #include "Bullet.h"
 #include "Chktex.h"
+#include "ColorSet.h"
 #include "Converter.h"
 #include "Counters.h"
 #include "Cursor.h"
@@ -353,6 +354,9 @@ public:
 	/// whether the bibinfo cache is valid
 	mutable bool bibinfo_cache_valid_;
 
+	///
+	mutable bool need_update;
+
 private:
 	int word_count_;
 	int char_count_;
@@ -459,7 +463,7 @@ Buffer::Impl::Impl(Buffer * owner, FileName const & file, bool readonly_,
 	  internal_buffer(false), read_only(readonly_), file_fully_loaded(false),
 	  need_format_backup(false), ignore_parent(false), macro_lock(false),
 	  externally_modified_(false), bibinfo_cache_valid_(false),
-	  word_count_(0), char_count_(0), blank_count_(0)
+	  need_update(false), word_count_(0), char_count_(0), blank_count_(0)
 {
 	refreshFileMonitor();
 	if (!cloned_buffer_) {
@@ -945,7 +949,9 @@ int Buffer::readHeader(Lexer & lex)
 	params().fontcolor = RGBColor(0, 0, 0);
 	params().isfontcolor = false;
 	params().notefontcolor = RGBColor(0xCC, 0xCC, 0xCC);
+	params().isnotefontcolor = false;
 	params().boxbgcolor = RGBColor(0xFF, 0, 0);
+	params().isboxbgcolor = false;
 	params().html_latex_start.clear();
 	params().html_latex_end.clear();
 	params().html_math_img_scale = 1.0;
@@ -985,7 +991,7 @@ int Buffer::readHeader(Lexer & lex)
 				      << token << '\'');
 
 		string const result =
-			params().readToken(lex, token, d->filename.onlyPath());
+			params().readToken(lex, token, d->filename);
 		if (!result.empty()) {
 			if (token == "\\textclass") {
 				d->layout_position = result;
@@ -2938,9 +2944,9 @@ void Buffer::dispatch(FuncRequest const & func, DispatchResult & dr)
 				undo().recordUndoBufferParams(CursorData());
 				branch_list.add(branch_name);
 				branch = branch_list.find(branch_name);
-				string const x11hexname = X11hexname(branch->color());
-				docstring const str = branch_name + ' ' + from_ascii(x11hexname);
-				lyx::dispatch(FuncRequest(LFUN_SET_COLOR, str));
+				if (branch)
+					// needed to update the color table for dark mode
+					branch->setColors("background", "background");
 				dr.setError(false);
 				dr.screenUpdate(Update::Force);
 			}
@@ -3532,6 +3538,9 @@ void Buffer::collectChildren(ListOfBuffers & children, bool grand_children) cons
 	// loop over children
 	for (auto const & p : d->children_positions) {
 		Buffer * child = const_cast<Buffer *>(p.first);
+		// This can happen when called during GUI operations
+		if (!theBufferList().isLoaded(child))
+			continue;
 		// No duplicates
 		ListOfBuffers::const_iterator bit = find(children.begin(), children.end(), child);
 		if (bit != children.end())
@@ -5003,6 +5012,8 @@ void Buffer::updateBuffer(UpdateScope scope, UpdateType utype) const
 	cbuf.tocBackend().update(true, utype);
 	if (scope == UpdateMaster)
 		cbuf.structureChanged();
+
+	d->need_update = false;
 }
 
 
@@ -5282,6 +5293,18 @@ void Buffer::updateBuffer(ParIterator & parit, UpdateType utype, bool const dele
 	// points to, if applicable).
 	parit.text()->inset().isChanged(changed);
 	popIncludedBuffer();
+}
+
+
+void Buffer::forceUpdate() const
+{
+	d->need_update = true;
+}
+
+
+bool Buffer::needUpdate() const
+{
+	return d->need_update;
 }
 
 

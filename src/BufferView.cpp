@@ -61,6 +61,7 @@
 #include "frontends/NullPainter.h"
 #include "frontends/Painter.h"
 #include "frontends/Selection.h"
+#include "frontends/Clipboard.h"
 
 #include "support/convert.h"
 #include "support/debug.h"
@@ -274,9 +275,6 @@ struct BufferView::Private
 	  */
 	frontend::GuiBufferViewDelegate * gui_;
 
-	/// Cache for Find Next
-	FuncRequest search_request_cache_;
-
 	///
 	map<string, Inset *> edited_insets_;
 
@@ -446,6 +444,26 @@ Buffer & BufferView::buffer()
 Buffer const & BufferView::buffer() const
 {
 	return buffer_;
+}
+
+
+docstring const & BufferView::searchRequestCache() const
+{
+	return theClipboard().getFindBuffer();
+}
+
+
+void BufferView::setSearchRequestCache(docstring const & text)
+{
+	bool casesensitive;
+	bool matchword;
+	bool forward;
+	bool wrap;
+	bool instant;
+	bool onlysel;
+	docstring const search = string2find(text, casesensitive, matchword,
+					     forward, wrap, instant, onlysel);
+	theClipboard().setFindBuffer(search);
 }
 
 
@@ -1155,6 +1173,7 @@ bool BufferView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
 	case LFUN_MARK_OFF:
 	case LFUN_MARK_ON:
 	case LFUN_MARK_TOGGLE:
+	case LFUN_SEARCH_STRING_SET:
 	case LFUN_SCREEN_RECENTER:
 	case LFUN_SCREEN_SHOW_CURSOR:
 	case LFUN_BIBTEX_DATABASE_ADD:
@@ -1609,24 +1628,21 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 
 	case LFUN_WORD_FIND_FORWARD:
 	case LFUN_WORD_FIND_BACKWARD: {
-		// FIXME THREAD
-		// Would it maybe be better if this variable were view specific anyway?
-		static docstring last_search;
 		docstring searched_string;
 
 		if (!cmd.argument().empty()) {
-			last_search = cmd.argument();
+			setSearchRequestCache(cmd.argument());
 			searched_string = cmd.argument();
 		} else {
-			searched_string = last_search;
+			searched_string = searchRequestCache();
 		}
 
 		if (searched_string.empty())
 			break;
 
-		bool const fw = act == LFUN_WORD_FIND_FORWARD;
 		docstring const data =
-			find2string(searched_string, true, false, fw);
+			find2string(searched_string, false, false,
+				    act == LFUN_WORD_FIND_FORWARD, false, false, false);
 		bool found = lyxfind(this, FuncRequest(LFUN_WORD_FIND, data));
 		if (found)
 			dr.screenUpdate(Update::Force | Update::FitCursor);
@@ -1636,19 +1652,38 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 	}
 
 	case LFUN_WORD_FIND: {
-		FuncRequest req = cmd;
-		if (cmd.argument().empty() && !d->search_request_cache_.argument().empty())
-			req = d->search_request_cache_;
-		if (req.argument().empty()) {
+		docstring arg = cmd.argument();
+		if (arg.empty())
+			arg = searchRequestCache();
+		if (arg.empty()) {
 			lyx::dispatch(FuncRequest(LFUN_DIALOG_SHOW, "findreplace"));
 			break;
 		}
-		if (lyxfind(this, req))
+		if (lyxfind(this, FuncRequest(act, arg)))
 			dr.screenUpdate(Update::Force | Update::FitCursor);
 		else
 			dr.setMessage(_("Search string not found!"));
 
-		d->search_request_cache_ = req;
+		setSearchRequestCache(arg);
+		break;
+	}
+
+	case LFUN_SEARCH_STRING_SET: {
+		docstring pattern = cmd.argument();
+		if (!pattern.empty()) {
+			setSearchRequestCache(pattern);
+			break;
+		}
+		if (cur.selection())
+			pattern = cur.selectionAsString(false);
+		else {
+			pos_type spos = cur.pos();
+			cur.innerText()->selectWord(cur, WHOLE_WORD);
+			pattern = cur.selectionAsString(false);
+			cur.selection(false);
+			cur.pos() = spos;
+		}
+		setSearchRequestCache(pattern);
 		break;
 	}
 
@@ -1831,7 +1866,7 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		cur.setCursor(doc_iterator_begin(cur.buffer()));
 		cur.selHandle(false);
 		// Force an immediate computation of metrics because we need it below
-		processUpdateFlags(Update::Force);
+		updateMetrics();
 
 		d->text_metrics_[&buffer_.text()].editXY(cur, p.x_, p.y_,
 			true, act == LFUN_SCREEN_UP);
@@ -2417,7 +2452,7 @@ void BufferView::mouseEventDispatch(FuncRequest const & cmd0)
 	// Do we have a selection?
 	theSelection().haveSelection(cursor().selection());
 
-	if (cur.needBufferUpdate()) {
+	if (cur.needBufferUpdate() || buffer().needUpdate()) {
 		cur.clearBufferUpdate();
 		buffer().updateBuffer();
 	}
@@ -2943,7 +2978,8 @@ void BufferView::insertLyXFile(FileName const & fname, bool const ignorelang)
 			buf.changeLanguage(buf.language(), d->cursor_.getFont().language());
 		buffer_.undo().recordUndo(d->cursor_);
 		cap::pasteParagraphList(d->cursor_, pars,
-					     buf.params().documentClassPtr(), el);
+					buf.params().documentClassPtr(),
+					buf.params().authors(), el);
 		res = _("Document %1$s inserted.");
 	} else {
 		res = _("Could not insert document %1$s");

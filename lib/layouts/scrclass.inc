@@ -8,7 +8,7 @@
 # Labeling is now used also in non-KOMA classes
 
 
-Format 90
+Format 93
 SecNumDepth             2
 TocDepth                2
 DefaultStyle            Standard
@@ -142,6 +142,8 @@ Style Addpart
 		LabelString   "Short Title|S"
 		Tooltip       "The part as it appears in the table of contents/running headers"
 		InsertCotext  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 End
 
@@ -153,6 +155,8 @@ Style Addchap
 		LabelString   "Short Title|S"
 		Tooltip       "The chapter as it appears in the table of contents/running headers"
 		InsertCotext  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 End
 
@@ -164,6 +168,8 @@ Style Addsec
 		LabelString   "Short Title|S"
 		Tooltip       "The section as it appears in the table of contents/running headers"
 		InsertCotext  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 End
 
@@ -238,6 +244,7 @@ Style Date
 	DocBookTag            date
 	DocBookTagType        paragraph
 	DocBookInInfo         always
+    DocBookNoFontInside   true
 End
 
 
@@ -286,6 +293,11 @@ Style Extratitle
 	LatexName             extratitle
 End
 
+Style Frontispiece
+	CopyStyle             Titlehead
+	LatexName             frontispiece
+End
+
 Input stdstruct.inc
 
 Style Abstract
@@ -312,6 +324,8 @@ InsetLayout Caption:Above
 		LabelString   "Short Title|S"
 		Tooltip       "The caption as it appears in the list of figures/tables"
 		InsertCotext  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 	HTMLStyle
 		div.float-caption {
@@ -335,6 +349,8 @@ InsetLayout Caption:Below
 		LabelString   "Short Title|S"
 		Tooltip       "The caption as it appears in the list of figures/tables"
 		InsertCotext  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 	HTMLStyle
 		div.float-caption {

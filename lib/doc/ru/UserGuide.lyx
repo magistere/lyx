@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 600
+\lyxformat 606
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -131,12 +131,12 @@ logicalmkup
 \branch Вопрос
 \selected 1
 \filename_suffix 0
-\color #00ff00
+\color #00ff00 #ff00ff
 \end_branch
 \branch Ответ
 \selected 0
 \filename_suffix 0
-\color #aa55ff
+\color #aa55ff #55aa00
 \end_branch
 \index Index
 \shortcut idx
@@ -1090,7 +1090,7 @@ status collapsed
 
 \begin_inset Info
 type  "shortcut"
-arg   "dialog-show findreplaceadv"
+arg   "dialog-show findreplace"
 \end_inset
 
  или
@@ -1265,7 +1265,7 @@ Comma Separated Values
 
 замена
 \family default
- открывает диалоговое окно 
+ открывает панель 
 \family sans
 Поиск
 \begin_inset space ~
@@ -1280,7 +1280,61 @@ Comma Separated Values
 .
  Как только будет найдено слово или выражение, \SpecialChar LyX
  выделит его.
- Нажатие кнопки 
+ Вы можете нажать кнопку 
+\family sans
+Найти
+\begin_inset space ~
+\end_inset
+
+>
+\family default
+ (клавишу 
+\family sans
+Return
+\family default
+ или 
+\begin_inset Info
+type  "shortcuts"
+arg   "word-find"
+\end_inset
+
+), чтобы пропустить выделенное слово и искать дальше; или кнопку 
+\family sans
+<
+\begin_inset space ~
+\end_inset
+
+Найти
+\family default
+ (сочетание 
+\family sans
+Shift-Return
+\family default
+ или 
+\begin_inset Info
+type  "shortcuts"
+arg   "word-find-backward"
+\end_inset
+
+), чтобы искать в обратном направлении.
+ Даже при закрытой панели для поиска можно использовать сочетания клавиш
+ 
+\begin_inset Info
+type  "shortcuts"
+arg   "word-find"
+\end_inset
+
+ и 
+\begin_inset Info
+type  "shortcuts"
+arg   "word-find-backward"
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Нажатие кнопки 
 \family sans
 Заменить
 \family default
@@ -1292,16 +1346,7 @@ Comma Separated Values
 
 на
 \family default
-.
- Вы можете нажать кнопку 
-\family sans
-Найти
-\begin_inset space ~
-\end_inset
-
-далее
-\family default
-, чтобы пропустить выделенное слово.
+ и ищет следующее совпадение.
  Нажмите 
 \family sans
 Заменить
@@ -1311,7 +1356,10 @@ Comma Separated Values
 всё
 \family default
 , чтобы автоматически заменить все вхождения указанного текста в документе.
- Параметр 
+\end_layout
+
+\begin_layout Standard
+Имеются следующие настройки: 
 \family sans
 Учитывать
 \begin_inset space ~
@@ -1323,7 +1371,7 @@ Comma Separated Values
  слова.
  К примеру, если этот переключатель установлен, поиск «Тест» не будет соответств
 овать слову «тест».
- Опция 
+ 
 \family sans
 Только
 \begin_inset space ~
@@ -1338,8 +1386,20 @@ Comma Separated Values
  может использоваться, чтобы заставить \SpecialChar LyX
  находить только полные слова, например,
  поиск слова «звезда» не даст сопоставления со словом «звездами».
- \SpecialChar LyX
- также предлагает расширенную версию 
+\end_layout
+
+\begin_layout Standard
+Панель также содержит кнопку 
+\family sans
+Свернуть
+\family default
+, которая оставляет видимой только первую строку для поиска, скрывая строку
+ замены и настройки поиска.
+\end_layout
+
+\begin_layout Standard
+\SpecialChar LyX
+ также предлагает расширенную версию панели 
 \family sans
 Поиск
 \begin_inset space ~
@@ -7464,7 +7524,7 @@ Return
 \family sans
 Return
 \family default
- является функцией разрыва абзаца, а отдельные строки адреса не являются
+ предназначен для разрыва абзаца, а отдельные строки адреса не являются
  абзацами.
  Таким образом, вы должны использовать разрыв строки (
 \begin_inset Info
@@ -8066,6 +8126,7 @@ Return
 \end_layout
 
 \begin_layout Verbatim
+
 Это текст в окружении 
 \begin_inset Quotes rld
 \end_inset
@@ -8080,6 +8141,7 @@ Return
 \begin_layout Verbatim
 \noindent
 \align block
+
 Следующие две строки - пустые:
 \end_layout
 
@@ -8092,6 +8154,7 @@ Return
 \end_layout
 
 \begin_layout Verbatim
+
 В окружении 
 \begin_inset Quotes rld
 \end_inset
@@ -8127,6 +8190,7 @@ Return
 \end_layout
 
 \begin_layout Verbatim*
+
 Это текст в окружении 
 \begin_inset Quotes rld
 \end_inset
@@ -11905,20 +11969,20 @@ name "subsec:Forced-Page-Breaks"
 \end_layout
 
 \begin_layout Standard
-Существует два типа разрывов страниц: первый, который завершает страницу
- без каких-либо специальных действий.
- Это может быть вставка выше или ниже абзаца через меню 
+Существует два типа разрывов страниц.
+ Первый из них завершает страницу без каких-либо специальных действий.
+ Он может быть вставлен до или после абзаца через меню 
 \family sans
 Вставка\SpecialChar menuseparator
 Форматирование\SpecialChar menuseparator
-Новая
+Разрыв
 \begin_inset space ~
 \end_inset
 
-страница
+страницы
 \family default
 .
- Второй тип, который действует через меню 
+ Второй тип (
 \family sans
 Вставка\SpecialChar menuseparator
 Форматирование\SpecialChar menuseparator
@@ -11936,9 +12000,10 @@ name "subsec:Forced-Page-Breaks"
 
 выравниванием
 \family default
-, завершает страницу, но растягивает оставшееся содержимое на всю страницу.
- Этот тип полезен в ситуации, когда разрыв оставляет страницу, на которой
- отсутствуют только последние несколько строк, перенесенные на новую страницу.
+) завершает страницу, при этом растягивая ее содержимое для получения заполненно
+й по высоте страницы.
+ Это может быть полезно в ситуации, когда разрыв применяется на почти заполненно
+й странице.
 \end_layout
 
 \begin_layout Standard
@@ -11947,8 +12012,8 @@ name "subsec:Forced-Page-Breaks"
  Это, конечно же, неправильный способ.
  \SpecialChar LyX
  дает вам возможность автоматически обеспечивать отображение рисунков и
- таблиц вверху страницы (или внизу, или в требуемом месте страницы), не
- беспокоясь о том, что предшествует или следует за вашим рисунком или таблицей.
+ таблиц вверху страницы (или внизу, или на отдельной странице), не беспокоясь
+ о том, что предшествует или следует за вашим рисунком или таблицей.
  См.
  главу 
 \begin_inset CommandInset ref
@@ -11957,9 +12022,9 @@ reference "chap:Floats-and-Notes"
 
 \end_inset
 
- для углубленного изучения категории 
+ для углубленного изучения 
 \family sans
-Плавающий объект
+Плавающих объектов
 \family default
 .
 \end_layout
@@ -11977,7 +12042,7 @@ name "subsec:Clear-Page-Breaks"
 status collapsed
 
 \begin_layout Plain Layout
-Разрыв страницы ! чистый
+Разрыв страницы ! с очисткой
 \end_layout
 
 \end_inset
@@ -11987,45 +12052,47 @@ status collapsed
 
 \begin_layout Standard
 Вместо принудительных разрывов страниц, когда содержимое, стоящее за разрывом,
- размещается непосредственно на следующей странице, вы также можете очищать
- страницы, разбивая их.
- Это означает, что текущий абзац уже завершен, и все, включая необработанные
+ размещается непосредственно на следующей странице, вы также можете разорвать
+ страницу с очисткой.
+ Это означает, что текущий абзац завершается, и все, включая необработанные
  плавающие объекты из предыдущей части документа, помещается после него,
- если необходимо, путем добавления страниц.
+ путем добавления страниц при необходимости.
 \end_layout
 
 \begin_layout Standard
-Вы можете вставить чистый разрыв страницы с помощью меню 
+Вы можете вставить такой разрыв страницы с помощью меню 
 \family sans
 Вставка\SpecialChar menuseparator
-Форма\SpecialChar softhyphen
-тирование\SpecialChar menuseparator
-Очистить
+\SpecialChar allowbreak
+Форматирование\SpecialChar menuseparator
+\SpecialChar allowbreak
+Новая
 \begin_inset space ~
 \end_inset
 
-страницу
+страница
 \family default
 .
  Если вы работаете с двусторонним документом, таким как книга, то можете
  использовать меню 
 \family sans
 Вставка\SpecialChar menuseparator
+\SpecialChar allowbreak
 Форматирование\SpecialChar menuseparator
-Очис\SpecialChar softhyphen
-тить
+\SpecialChar allowbreak
+Новая
 \begin_inset space ~
 \end_inset
 
-двойную
+нечётная
 \begin_inset space ~
 \end_inset
 
-страницу
+страница
 \family default
-, чтобы вставить чистый разрыв страницы, который гарантирует, что последующая
- страница будет правой страницей (нечетной), при необходимости добавив еще
- одну страницу.
+, чтобы вставить разрыв страницы, который гарантирует, что последующая страница
+ будет правой (нечетной), для этого возможно будет добавлена пустая четная
+ страница.
 \end_layout
 
 \begin_layout Subsubsection
@@ -12135,12 +12202,11 @@ arg   "newline-insert linebreak"
 \end_layout
 
 \begin_layout Standard
-Вы не должны использовать принудительные разрывы строк, отвергая процедуру
- разрыва строк, принятую в \SpecialChar LaTeX
-, поскольку \SpecialChar LaTeX
- очень хорош и в этом.
- Однако существует ряд ситуаций, когда необходимо активно использовать разрывы
- строк, например, при наборе стихов или адресов (см.
+Не нужно использовать принудительные разрывы строк для коррекции разбиения
+ на строки, предложенного \SpecialChar LaTeX
+, он очень хорош в этом.
+ Однако существует ряд ситуаций, когда разрывы строк необходимы: например
+ при наборе стихов или адресов (см.
  пп.
 \begin_inset space ~
 \end_inset
@@ -18409,13 +18475,15 @@ status collapsed
 \begin_layout Standard
 Очевидно, что \SpecialChar LyX
  может избежать разрыва страниц после заголовков разделов.
- Это часть преимуществ окружений абзацев.
+ Это одно из преимуществ применения окружений абзацев.
  Но как насчет висячих строк, когда разрывы страниц оставляют одну строку
  абзаца в одиночестве в верхней или нижней части страницы? \SpecialChar LaTeX
  содержит правила,
  регулирующие разрывы страниц, и некоторые из этих правил специально предназначе
 ны для предотвращения висячих строк.
- Если они все же появляются и вам не нравятся, то можно добавить команды
+ Если они все же появляются и это вам не нравится, то в преамбулу \SpecialChar LaTeX
+ вашего
+ документа можно добавить команды
 \end_layout
 
 \begin_layout Standard
@@ -18433,8 +18501,7 @@ clubpenalty=10000
 \end_layout
 
 \begin_layout Standard
-в преамбулу \SpecialChar LaTeX
- вашего документа, чтобы избежать их.
+чтобы избежать их появления.
  Некоторые книги по \SpecialChar LaTeX
  (такие как 
 \begin_inset CommandInset citation
@@ -18452,7 +18519,7 @@ literal "false"
 
 \end_inset
 
-) содержат больше информации о технических деталях механизма разрыва страниц
+) содержат больше информации о механизме разбиения на страницы, реализованном
  в \SpecialChar LaTeX
 .
 \end_layout
@@ -19428,8 +19495,8 @@ arg   "tabular-insert"
 .
  Появится диалоговое окно с запросом количества строк и столбцов, также
  можно выбрать определенный стиль (границы).
- Таблица по умолчанию имеет линии вокруг любой ячейки, а первая строка кажется
- отделенной от остальной таблицы.
+ Таблица по умолчанию имеет линии вокруг каждой ячейки, а первая строка
+ кажется отделенной от остальной таблицы.
  Это отделение появляется из-за двойной линии: ячейки первого ряда имеют
  линию непосредственно под собой, а ячейки второго ряда — другую линию непосредс
 твенно над собой.
@@ -19688,8 +19755,8 @@ arg   "tabular-insert"
 Макет текста
 \family default
 .
- Так что, если приведенный выше стиль по умолчанию не тот, который вам нужен,
- следует изменить этот параметр.
+ Так что, если приведенный выше стиль по умолчанию вам не подходит, то следует
+ изменить этот параметр.
 \end_layout
 
 \begin_layout Subsection
@@ -19702,9 +19769,9 @@ arg   "tabular-insert"
 Настройки
 \family default
 .
- Это запустит диалоговое окно настройки таблицы.
- Здесь вы можете настроить параметры ячейки, строки и/или столбца, где курсор
- находится в данный момент.
+ Это откроет диалоговое окно настройки таблицы.
+ Здесь вы можете настроить параметры той ячейки, строки и/или столбца, где
+ курсор находится в данный момент.
  Большинство параметров также работают для выделения.
  Это означает, что если вы выделите несколько ячеек, столбцов или строк,
  действие будет выполнено для всей выделенной совокупности.
@@ -19730,10 +19797,10 @@ arg   "tabular-insert"
 таблицы
 \family default
  диалогового окна можно установить выравнивание для текущей строки.
- Если вы добавите строку или столбец, он будет вставлен рядом или ниже текущей
- ячейки соответственно.
- Вертикальное выравнивание столбца можно отрегулировать только при заданной
- ширине столбца.
+ Если вы добавите строку или столбец, они будет вставлены правее или ниже
+ текущей ячейки соответственно.
+ Вертикальное выравнивание столбца можно изменять только при заданной ширине
+ столбца.
  Заданная ширина позволит ячейке иметь разрывы строк и содержать несколько
  абзацев текста, см.
  подраздел
@@ -19751,23 +19818,22 @@ reference "subsec:Table-Cells"
 \end_layout
 
 \begin_layout Standard
-Вы можете пометить несколько ячеек одной строки/столбца как ячейку с несколькими
- столбцами/строками, используя флажок 
+Вы можете пометить несколько ячеек одной строки/столбца объединенными, используя
+ флажок 
 \family sans
-Многоколоночность
+Объединённый столбец
 \family default
  или 
 \family sans
-Многострочность
+Объединённая строка
 \family default
 .
- Это объединит ячейки в одну ячейку, распределенную по нескольким столбцам/строк
-ам.
- Ячейки с несколькими столбцами обрабатываются как собственные строки, поэтому
+ Это объединит ячейки в одну ячейку, занимающую несколько столбцов/строк.
+ Ячейки с несколькими столбцами обрабатываются как отдельные строки, поэтому
  параметры выравнивания, ширины и рамок влияют только на ячейку с несколькими
  столбцами.
- Вот пример таблицы с многоколоночной ячейкой в первой строке и ячейкой
- в последней строке без верхней границы:
+ Вот пример таблицы с объединенной ячейкой в первой строке и ячейкой в последней
+ строке без верхней границы:
 \end_layout
 
 \begin_layout Standard
@@ -19925,7 +19991,7 @@ reference "subsec:Table-Cells"
 .
  Вы также можете повернуть текущую ячейку или всю таблицу на требуемый угол.
  Эти повороты не будут отображаться в окне \SpecialChar LyX
-, но проявятся на выходе.
+, но проявятся на выводе.
 \end_layout
 
 \begin_layout Standard
@@ -25160,14 +25226,14 @@ name "sec:Brackets-and-Delimiters"
 \begin_layout Standard
 В \SpecialChar LyX
  доступно несколько видов скобок.
- Для некоторых целей достаточно использовать только ключевые 
+ Иногда использования клавиш 
 \family typewriter
 []{}()|<>
 \family default
-.
+ будет достаточно.
  Но если вы хотите охватить большую структуру, например матрицу или дробь,
- или у вас должно быть несколько уровней скобок, лучше использовать значок
- ограничителя 
+ или у вас должно быть несколько уровней скобок, лучше использовать кнопку
+ 
 \begin_inset Info
 type  "icon"
 arg   "dialog-show mathdelimiter"
@@ -25178,7 +25244,7 @@ arg   "dialog-show mathdelimiter"
 Панели формул
 \family default
 .
- Например, если вы построите скобки вокруг матрицы следующим образом:
+ Например, если вы введете скобки вокруг матрицы следующим образом:
 \begin_inset Formula 
 \[
 \left[\begin{array}{cc}
@@ -25190,7 +25256,7 @@ arg   "dialog-show mathdelimiter"
 \end_inset
 
 это облегчит просмотр вложенных скобок.
- Ниже, выражение слева вводилось с помощью значка ограничителя 
+ Ниже, выражение слева вводилось с помощью кнопки 
 \begin_inset Info
 type  "icon"
 arg   "dialog-show mathdelimiter"
@@ -25228,9 +25294,9 @@ arg   "dialog-show mathdelimiter"
 
 \end_inset
 
-Если вы используете значок ограничителя, круглые скобки и другие скобки
- из этого меню автоматически будут менять размер, чтобы соответствовать
- размеру того, что находится внутри.
+Если вы используете кнопку, то круглые и другие скобки из этого меню автоматичес
+ки будут менять размер, чтобы соответствовать размеру того, что находится
+ внутри.
 \end_layout
 
 \begin_layout Standard
@@ -25257,7 +25323,7 @@ arg   "dialog-show mathdelimiter"
 \begin_layout Standard
 Если вы хотите поместить скобки вокруг существующих математических структур,
  таких как квадратный корень, вы можете сделать это, сначала выделив (выбрав)
- структуру, которая должна идти внутри скобок.
+ структуру, которая должна размещаться внутри скобок.
  Затем выберите соответствующие скобки слева и справа и нажмите 
 \family sans
 Вставить
@@ -27343,11 +27409,9 @@ name "subsec:Table-of-Contents"
 Содержание вставляется с помощью меню 
 \family sans
 Вставка\SpecialChar menuseparator
-Списки\SpecialChar breakableslash
-\SpecialChar allowbreak
-содержание\SpecialChar breakableslash
-\SpecialChar allowbreak
-библиографии\SpecialChar menuseparator
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список\SpecialChar menuseparator
 Содержание
 \family default
 .
@@ -27425,11 +27489,9 @@ name "subsec:List-of-Figures"
  Вы можете вставить их через подменю 
 \family sans
 Вставка\SpecialChar menuseparator
-Списки\SpecialChar breakableslash
-\SpecialChar allowbreak
-содержание\SpecialChar breakableslash
-\SpecialChar allowbreak
-библиографии
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список
 \family default
 .
  Элементы таких списков — это номера и заголовки соответствующих плавающих
@@ -28389,8 +28451,9 @@ status collapsed
 \family sans
 Вставка\SpecialChar menuseparator
 \SpecialChar allowbreak
-Списки/\SpecialChar allowbreak
-содержание/библиографии\SpecialChar menuseparator
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список\SpecialChar menuseparator
 Библиография Bib(la)TeX
 \family default
 .
@@ -28499,7 +28562,9 @@ biblatex
 : используйте меню 
 \family sans
 Вставка\SpecialChar menuseparator
-Списки/содержание/библиографии\SpecialChar menuseparator
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список\SpecialChar menuseparator
 Библиография Bib(la)TeX
 \family default
 .
@@ -29433,8 +29498,9 @@ arg   "index-insert"
 Предметный указатель вставляется в документ с помощью меню 
 \family sans
 Вставка\SpecialChar menuseparator
-Списки/\SpecialChar allowbreak
-содержание/библиографии\SpecialChar menuseparator
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список\SpecialChar menuseparator
 Предметный указатель
 \family default
 .
@@ -30176,11 +30242,9 @@ Index
 \family sans
 Вставка\SpecialChar menuseparator
 \SpecialChar allowbreak
-Списки\SpecialChar breakableslash
-\SpecialChar allowbreak
-содержание\SpecialChar breakableslash
-\SpecialChar allowbreak
-библиографии
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список
 \family default
 , а в меню 
 \family sans
@@ -30574,16 +30638,22 @@ textbf{#1}}}
 \begin_inset space \space{}
 \end_inset
 
-, то их необходимо экранировать, добавляя перед ними символ кавычки.
+, то их необходимо экранировать, добавляя перед ними знак процента.
+ Чтобы избежать влияния одиночной кавычки на следующий за ней символ нужно
+ добавлять после нее фигурные скобки: 
+\family sans
+""{}
+\family default
+
 \begin_inset CommandInset nomenclature
 LatexCommand nomenclature
-symbol "\"@, \"|, \"!, \"\""
-description "Знак кавычки в коде TeX выводится записью ' \"\" '."
+symbol "%@, %|, %!, %\"{}"
+description "Знак кавычки в коде TeX выводится записью ' %\"{}%\"{} '."
 literal "true"
 
 \end_inset
 
-
+.
 \end_layout
 
 \begin_layout Subsection
@@ -31003,9 +31073,9 @@ status collapsed
 \family sans
 Вставка\SpecialChar menuseparator
 \SpecialChar allowbreak
-Списки/\SpecialChar allowbreak
-содержание/\SpecialChar allowbreak
-библиографии\SpecialChar menuseparator
+Содержание\SpecialChar breakableslash
+библиография\SpecialChar breakableslash
+список\SpecialChar menuseparator
 Список обозначений
 \family default
 .
@@ -37698,11 +37768,11 @@ reference "subsec:Forced-Line-Breaks"
 \end_layout
 
 \begin_layout Description
-Новая
+Разрыв
 \begin_inset space ~
 \end_inset
 
-страница Вставляет принудительный разрыв страницы, как описано в подразделе
+страницы Вставляет принудительный разрыв страницы, как описано в подразделе
 \begin_inset space ~
 \end_inset
 
@@ -37775,11 +37845,11 @@ noprefix "false"
 \end_layout
 
 \begin_layout Description
-Очистить
+Новая
 \begin_inset space ~
 \end_inset
 
-страницу Вставляет чистый разрыв страницы, как описано в подразделе
+страница Вставляет разрыв страницы с очисткой, как описано в подразделе
 \begin_inset space ~
 \end_inset
 
@@ -37794,15 +37864,16 @@ reference "subsec:Clear-Page-Breaks"
 \end_layout
 
 \begin_layout Description
-Очистить
+Новая
 \begin_inset space ~
 \end_inset
 
-двойную
+нечётная
 \begin_inset space ~
 \end_inset
 
-страницу Вставляет чистый разрыв двойной страницы, как описано в подразделе
+страница Вставляет разрыв страницы с очисткой и гарантией нечетного номера,
+ как описано в подразделе
 \begin_inset space ~
 \end_inset
 
@@ -37954,7 +38025,7 @@ reference "subsec:Clear-Page-Breaks"
 \begin_layout Subsection
 
 \family sans
-Списки/содержание/библиографии
+Содержание/библиография/список
 \end_layout
 
 \begin_layout Standard
@@ -38611,12 +38682,24 @@ status collapsed
 \family sans
 Сохранить закладку 1
 \family default
-.
+ (
+\begin_inset Info
+type  "shortcut"
+arg   "bookmark-save 1"
+\end_inset
+
+).
  Затем перейдите к разделу 6.3 и используйте 
 \family sans
 Сохранить закладку 2
 \family default
-.
+ (
+\begin_inset Info
+type  "shortcut"
+arg   "bookmark-save 2"
+\end_inset
+
+).
  Теперь вы можете легко перемещаться между этими разделами с помощью меню
  или сочетаний клавиш 
 \begin_inset Info
@@ -38636,8 +38719,7 @@ arg   "bookmark-goto 2"
 \end_layout
 
 \begin_layout Standard
-Сохраненные закладки действительны до закрытия документа.
- Подменю 
+Подменю 
 \family sans
 Очистить закладки
 \family default

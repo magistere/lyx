@@ -4426,6 +4426,9 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 				sdata = bv->cursor().getEncoding()->name();
 				if (!sdata.empty())
 					showDialog("symbols", sdata);
+			} else if (name == "findreplace") {
+				sdata = to_utf8(bv->cursor().selectionAsString(false));
+				showDialog(name, sdata);
 			// bug 5274
 			} else if (name == "prefs" && isFullScreen()) {
 				lfunUiToggle("fullscreen");
@@ -4550,7 +4553,7 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 					      lyxrc.currentZoom, lyxrc.defaultZoom));
 
 			guiApp->fontLoader().update();
-			dr.screenUpdate(Update::Force | Update::FitCursor);
+			dr.screenUpdate(Update::ForceAll | Update::FitCursor);
 			break;
 		}
 
@@ -4657,12 +4660,6 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 			// let's try that:
 			dispatchToBufferView(cmd, dr);
 			break;
-	}
-
-	// Part of automatic menu appearance feature.
-	if (isFullScreen()) {
-		if (menuBar()->isVisible() && lyxrc.full_screen_menubar)
-			menuBar()->hide();
 	}
 
 	// Need to update bv because many LFUNs here might have destroyed it
@@ -4896,7 +4893,8 @@ void GuiView::doShowDialog(QString const & qname, QString const & qdata,
 				// activateWindow is needed for floating dockviews
 				dialog->asQWidget()->raise();
 				dialog->asQWidget()->activateWindow();
-				dialog->asQWidget()->setFocus();
+				if (dialog->wantInitialFocus())
+					dialog->asQWidget()->setFocus();
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 600
+\lyxformat 606
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -240,8 +240,12 @@ subequations
 \begin_body
 
 \begin_layout Title
-Расширенное руководство по математике \SpecialChar LyX
+Расширенное руководство \SpecialChar LyX
 
+\begin_inset Newline newline
+\end_inset
+
+по математике
 \end_layout
 
 \begin_layout Author
@@ -562,7 +566,7 @@ arg   "math-display"
  и используйте одно из сочетаний клавиш 
 \begin_inset Info
 type  "shortcuts"
-arg   "math-mode"
+arg   "math-display"
 \end_inset
 
  или меню
@@ -604,54 +608,28 @@ displaystyle
 \end_layout
 
 \begin_layout Standard
-Математические панели инструментов могут быть включены в меню 
+Видимость математических панелей инструментов настраивается в меню 
 \family sans
 Вид\SpecialChar menuseparator
 Панели инструментов
 \family default
 .
- При нажатии на 
+ Доступны три варианта: 
 \family sans
-Формула
+Вкл.
 \family default
- и/или 
+, 
 \family sans
-Математические панели
+Выкл.
+
 \family default
- соответствующая панель (или пара панелей) инструментов будет постоянно
- отображаться внизу главного окна \SpecialChar LyX
-; это состояние отображается в меню 
+ и 
 \family sans
-Панели инструментов
-\family default
- галочкой.
- При повторном нажатии в этом состоянии на 
-\family sans
-Формула
-\family default
- и/или 
-\family sans
-Математические панели
-\family default
- соответствующая панель инструментов будет отображается только тогда, когда
- курсор находится внутри формулы; это состояние визуализируется переименованием
- пункта меню с 
-\family sans
-Формула
-\family default
- на 
-\family sans
-Формула (автоматически)
-\family default
- и/или с 
-\family sans
-Математические панели
-\family default
- на 
-\family sans
-Математические панели (автоматически)
+Автоматически
 \family default
 .
+ При выборе последнего варианта панели будут автоматически появляться только
+ когда курсор находится внутри формулы.
 \end_layout
 
 \begin_layout Standard
@@ -731,8 +709,9 @@ L@\SpecialChar LaTeX
  Когда строки и столбцы меняются местами через меню, столбец или строка,
  в которой находится курсор, заменяется на столбец справа или строку ниже,
  соответственно.
- Если курсор находится в последнем столбце или строке, в обмене участвует
- столбец слева или предпоследняя строка.
+ Если курсор находится в последнем столбце или строке, то в обмене участвует
+ предпоследний столбец\SpecialChar breakableslash
+строка.
 \end_layout
 
 \begin_layout Standard
@@ -821,7 +800,7 @@ text
 
 \begin_layout Standard
 Большинство \SpecialChar LaTeX
--команд для математических конструкций имеют следующий формат:
+-команд для математических конструкций имеют следующий синтаксис:
 \end_layout
 
 \begin_layout Standard
@@ -836,8 +815,8 @@ text
 Команда всегда начинается с обратной косой черты «
 \backslash
 ».
- Если необязательные аргументы не указываются, то связанные скобки также
- опускаются.
+ Если необязательные аргументы не указываются, то соответствующие скобки
+ также опускаются.
  Скобки вокруг обязательных аргументов в этом документе названы скобками
  \SpecialChar TeX
 
@@ -856,8 +835,8 @@ T@\SpecialChar TeX
  автоматически
  создаст скобку \SpecialChar TeX
 .
- Во всех остальных случаях скобки \SpecialChar TeX
- создаются в формулах с помощью команды
+ Во всех остальных случаях для ввода отдельных скобок \SpecialChar TeX
+ используется команда
  
 \series bold
 
@@ -865,10 +844,14 @@ T@\SpecialChar TeX
 {
 \series default
 .
+ Обычные скобки вводятся просто клавишами 
+\series bold
+{}
+\series default
+.
  Скобки \SpecialChar TeX
  в \SpecialChar LyX
- отмечаются красным цветом, в отличие от обычных скобок, которые
- расцвечиваются синим цветом.
+ отмечаются красным цветом, а обычные — синим.
  В режиме \SpecialChar TeX
  не требуется команды для получения скобок \SpecialChar TeX
 .
@@ -891,6 +874,12 @@ T@\SpecialChar TeX
 
 \begin_layout Standard
 Неразрывный пробел вставляется с помощью 
+\begin_inset Info
+type  "shortcuts"
+arg   "command-alternatives math-space ; space-insert protected"
+\end_inset
+
+ или 
 \family sans
 Вставка\SpecialChar menuseparator
 Форматирование\SpecialChar menuseparator
@@ -901,11 +890,11 @@ T@\SpecialChar TeX
 \end_layout
 
 \begin_layout Subsection*
-Заметки по синтаксису
+Замечания по используемому синтаксису
 \end_layout
 
 \begin_layout Itemize
-Символ ␣ обозначает пробел в вводе.
+Символ ␣ обозначает клавишу пробела, нажимаемую пользователем.
 \end_layout
 
 \begin_layout Itemize
@@ -1958,7 +1947,7 @@ D
 \backslash
 cfrac
 \series default
- создает дробь всегда в размере выделенной формулы, даже если она является
+ всегда создает дробь в размере выделенной формулы, даже если она является
  частью другой дроби.
 \end_layout
 
@@ -2121,7 +2110,7 @@ unitfrac
 \end_inset
 
 .
- Более того, имеется команда 
+ Также имеется команда 
 \series bold
 
 \backslash
@@ -2132,7 +2121,7 @@ unitfracthree
 \begin_inset Formula $\unitfrac[2]{1}{3}$
 \end_inset
 
-
+.
 \end_layout
 
 \begin_layout Standard
@@ -3282,7 +3271,7 @@ reference "subsec:Chemical-Symbols-and"
 \begin_inset Text
 
 \begin_layout Plain Layout
-корректные индексы
+Корректные индексы:
 \end_layout
 
 \end_inset
@@ -3310,7 +3299,7 @@ reference "subsec:Chemical-Symbols-and"
 \begin_layout Standard
 Более короткий индекс по умолчанию размещается под или над первым символом
  более длинного индекса.
- Чтобы избежать этого, можно использовать команду 
+ Чтобы изменить это, можно использовать команду 
 \series bold
 
 \backslash
@@ -3354,15 +3343,10 @@ type  "icon"
 arg   "math/phantom"
 \end_inset
 
- математической панели инструментов, которая создает один или несколько
- фиктивных символов (фантомов).
- При вставке 
-\series bold
-
-\backslash
-phantom
-\series default
- появляется маленькая синяя рамка с двумя красными стрелками.
+ математической панели инструментов для создания одного или нескольких фиктивных
+ символов (фантомов).
+ При вставке фантомов появляется маленькая синяя рамка с двумя красными
+ стрелками.
  Стрелки указывают, что полная ширина и высота содержимого поля будут созданы
  в качестве заполнителя.
  Фиктивные символы являются соответственно заполнителями, имеющими размеры
@@ -3419,6 +3403,12 @@ phantom
 \begin_inset space \textvisiblespace{}
 \end_inset
 
+
+\backslash
+mathrm
+\begin_inset space \textvisiblespace{}
+\end_inset
+
 F
 \end_layout
 
@@ -3460,6 +3450,12 @@ phantom
 \begin_inset space \textvisiblespace{}
 \end_inset
 
+
+\backslash
+mathrm
+\begin_inset space \textvisiblespace{}
+\end_inset
+
 F
 \end_layout
 
@@ -3485,11 +3481,11 @@ F
 \begin_layout Plain Layout
 
 \backslash
-Lambda^
+Lambda
 \begin_inset space \textvisiblespace{}
 \end_inset
 
-
+^
 \backslash
 phantom
 \begin_inset space \textvisiblespace{}
@@ -3865,17 +3861,13 @@ underline
 \end_layout
 
 \begin_layout Standard
-Чтобы подчеркнуть дважды, используйте 
+Чтобы подчеркнуть двойной линией, используйте 
 \series bold
 
 \backslash
 underline
 \series default
  дважды.
-\end_layout
-
-\begin_layout Standard
-Можно разместить до 6 линий (над- или подчеркивания) над или под символами.
 \end_layout
 
 \begin_layout Standard
@@ -4419,7 +4411,11 @@ hdotsfor
 
 \end_inset
 
-, которая имеет следующий формат:
+ (необходима загрузка пакета 
+\series bold
+mathtools
+\series default
+), которая имеет следующий формат:
 \end_layout
 
 \begin_layout Standard
@@ -4725,8 +4721,8 @@ C & F & 10000
 \end_layout
 
 \begin_layout Standard
-Для последующего добавления или удаления строк и столбцов можно использовать
- кнопки 
+Для добавления или удаления строк и столбцов можно использовать кнопки панели
+ 
 \begin_inset Info
 type  "icon"
 arg   "tabular-feature append-row"
@@ -4738,8 +4734,12 @@ type  "icon"
 arg   "tabular-feature delete-row"
 \end_inset
 
- и т.д.
- математической панели инструментов или меню 
+ и т.
+\begin_inset space \thinspace{}
+\end_inset
+
+д.
+ или меню 
 \family sans
 Правка\SpecialChar menuseparator
 Строки и столбцы
@@ -5265,28 +5265,21 @@ renewcommand
 \backslash
 renewcommand
 \series default
- назначает 
+ назначает заданный 
 \series bold
 коэффициент-растяжения
 \series default
- ранее определенной команде 
+ предопределенной команде 
 \series bold
 
 \backslash
 arraystretch
 \series default
 .
- Для удвоения, например, расстояния между строками, используйте 2 в качестве
+ Например, для удвоения расстояния между строками используйте 2 в качестве
  значения этого коэффициента.
  Далее он будет использоваться для всех последующих матриц.
- Чтобы вернуться к исходному параметру разделения строк, задайте значение
- этого коэффициента для 
-\series bold
-
-\backslash
-arraystretch
-\series default
- равным 1.
+ Чтобы восстановить исходное значение, задайте этот коэффициент равным 1.
 \end_layout
 
 \begin_layout Standard
@@ -6013,7 +6006,7 @@ Bigg
 \begin_inset Text
 
 \begin_layout Plain Layout
-все скобки одинакового размера:
+Все скобки одинакового размера:
 \end_layout
 
 \end_inset
@@ -6036,7 +6029,7 @@ Bigg
 \begin_inset Text
 
 \begin_layout Plain Layout
-а это выглядит получше:
+А это выглядит получше:
 \end_layout
 
 \end_inset
@@ -6078,7 +6071,7 @@ C
 \end_layout
 
 \begin_layout Standard
-Вот демонстрация всех размеров скобок:
+Вот пример со всеми размерами скобок:
 \end_layout
 
 \begin_layout Standard
@@ -6624,9 +6617,8 @@ left
 right
 \series default
  будут преобразованы \SpecialChar LyX
- в квадратные скобки нужного размера, когда документ
- будет перезагружен, а пропущенная квадратная скобка будет отображаться
- в виде пунктирной линии.
+ в скобки нужного размера, когда документ будет перезагруже
+н, и пропущенная скобка станет отображаться в виде пунктирной линии.
 \end_layout
 
 \begin_layout Standard
@@ -7112,11 +7104,7 @@ _7
 \begin_inset space \textvisiblespace{}
 \end_inset
 
-^
-\begin_inset space \textvisiblespace{}
-\end_inset
-
-C
+^C
 \end_layout
 
 \end_inset
@@ -10239,11 +10227,6 @@ ddot
 \end_layout
 
 \begin_layout Standard
-В математический текст можно непосредственно вставлять умлауты и другие
- акцентированные символы.
-\end_layout
-
-\begin_layout Standard
 \begin_inset VSpace bigskip
 \end_inset
 
@@ -10905,10 +10888,17 @@ status collapsed
 \end_layout
 
 \begin_layout Standard
-Иногда в формулу необходимо вставить горизонтальный промежуток.
+Иногда в формулу необходимо вставить горизонтальный пробел.
  Это делается путем вставки неразрывного пробела (
+\begin_inset Info
+type  "shortcut"
+arg   "command-alternatives math-space ; space-insert protected"
+\end_inset
+
+ или 
 \family sans
 Вставка\SpecialChar menuseparator
+\SpecialChar allowbreak
 Форматирование\SpecialChar menuseparator
 Неразрывный пробел
 \family default
@@ -10933,8 +10923,8 @@ arg   "math-insert \\space"
 \end_inset
 
  математической панели инструментов или специальных команд.
- Независимо от введенной команды, можно снова выбрать размер промежутка,
- нажимая клавишу 
+ Размер промежутка можно изменять, поместив курсор после символа пробела
+ и нажимая клавишу 
 \family sans
 Пробел
 \family default
@@ -13372,7 +13362,7 @@ usepackage{color}
 \begin_inset VSpace medskip
 \end_inset
 
-Для окраски блоков используется команда 
+Для создания цветных блоков используется команда 
 \series bold
 
 \backslash
@@ -13553,6 +13543,10 @@ fbox
 \begin_inset space \textvisiblespace{}
 \end_inset
 
+
+\begin_inset Formula $\leftarrow\leftarrow$
+\end_inset
+
 A=B
 \end_layout
 
@@ -13580,6 +13574,10 @@ A=B
 \backslash
 fbox
 \begin_inset space \textvisiblespace{}
+\end_inset
+
+
+\begin_inset Formula $\leftarrow\leftarrow$
 \end_inset
 
 
@@ -13636,7 +13634,7 @@ C=D
 \backslash
 colorbox
 \series default
- окрашивает только блок, но не символы в нем.
+ окрашивает только фон блока, но не символы в нем.
  Чтобы раскрасить все символы, вся формула должна быть выделена, и в диалоговом
  окне 
 \family sans
@@ -13657,8 +13655,8 @@ arg   "dialog-show character"
 \family default
 .
  Номер формулы будет иметь тот же цвет, что и формула.
- Если номер формулы должен быть другого цвета, отличного от цвета символов
- формулы, цвет надо менять внутри формулы.
+ Если номер формулы должен быть другого цвета, то цвет надо менять внутри
+ формулы.
 \end_layout
 
 \begin_layout Standard
@@ -15311,12 +15309,12 @@ arg   "math-insert \\intop"
 \begin_layout Standard
 Такие операторы названы большими, потому что они больше по размеру, чем
  выглядящие иногда одинаково бинарные операторы.
- Все большие операторы могут иметь ограничения, описанные в следующем подразделе.
+ Все большие операторы могут иметь пределы, описанные в следующем подразделе.
 \end_layout
 
 \begin_layout Standard
-Для всех операторов интегралов доступен другой их вариант, задаваемых командами,
- оканчивающихся на 
+Для всех операторов интегралов доступны другие их варианты, задаваемые командами
+, оканчивающимися на 
 \series bold
 op
 \series default
@@ -15332,14 +15330,22 @@ intop
 \backslash
 ointop
 \series default
- и т.д.
+ и т.
+\begin_inset space \thinspace{}
+\end_inset
+
+д.
  Эти операторы отличаются от 
 \series bold
 
 \backslash
 int
 \series default
- и т.д.
+ и т.
+\begin_inset space \thinspace{}
+\end_inset
+
+д.
  стилем отображения операторных пределов, см.
  
 \begin_inset CommandInset ref
@@ -15757,7 +15763,7 @@ A(x)
 \end_layout
 
 \begin_layout Standard
-Пределы в обычных формулах устанавливаются рядом с оператором, справа.
+Пределы в обычных формулах располагаются справа от оператора.
  Пределы в выделенных формулах располагаются выше и/или ниже оператора,
  за исключением пределов интегралов.
 \end_layout
@@ -15825,7 +15831,7 @@ ointop
  и расположен под интегралами:
 \begin_inset Formula 
 \begin{equation}
-\iiint_{V}X\,\mathrm{d}V=U\label{eq:VolInt}
+\iiint\limits_{V}X\,\mathrm{d}V=U\label{eq:VolInt}
 \end{equation}
 
 \end_inset
@@ -17624,8 +17630,8 @@ DeclareMathOperator{новая-команда}{отображение}
 Отображение может быть знаками или символами, которые определяют, как оператор
  выглядит в выводе.
  Чтобы определить большой оператор, за командой указывается символ *.
- Все определяемые пользователем большие операторы могут иметь ограничения,
- как описано в 
+ Все определяемые пользователем большие операторы могут иметь пределы, как
+ описано в 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "subsec:Operator-Limits"
@@ -18757,8 +18763,8 @@ status collapsed
 \end_layout
 
 \begin_layout Standard
-Для символов в формулах, аналогичных символам в тексте, используются следующие
- команды размера шрифта:
+Так же, как и для текста, в формулах доступны следующие команды размера
+ шрифта:
 \end_layout
 
 \begin_layout Standard
@@ -18828,7 +18834,7 @@ tiny
 \end_layout
 
 \begin_layout Standard
-Размер, создаваемый командами, зависит от размера шрифта документа, который
+Размер, задаваемый командами, зависит от размера шрифта документа, который
  соответствует команде 
 \series bold
 
@@ -19203,7 +19209,7 @@ status collapsed
 \end_layout
 
 \begin_layout Standard
-Греческие буквы могут быть вставлены с помощью команд, а также с помощью
+Греческие буквы могут быть вставлены как с помощью команд, так и с помощью
  кнопки 
 \begin_inset Info
 type  "icon"
@@ -28859,8 +28865,7 @@ multline
 \end_layout
 
 \begin_layout Standard
-В выводе будет пронумерована только последняя (первая) строка окружения
- 
+В выводе будет пронумерована только последняя строка окружения 
 \family sans
 multline
 \family default
@@ -28868,11 +28873,12 @@ multline
 \family sans
 Справа
 \family default
- (
+.
+ При нумерации 
 \family sans
 Слева
 \family default
-)
+, пронумерована будет только первая строка
 \begin_inset Foot
 status collapsed
 
@@ -33777,7 +33783,7 @@ status open
 Примечание.
 
 \series default
- Необходимо использовать правильные ограничители 
+ Необходимо использовать правильные скобки 
 \begin_inset Formula $\left(\right)$
 \end_inset
 
@@ -35505,9 +35511,8 @@ end{multicols}
 \end_layout
 
 \begin_layout Standard
-Благодаря этой команде перед формулой автоматически добавляется некоторый
- промежуток.
- Чтобы нивелировать его, перед формулой вставляется вертикальный промежуток
+Из-за этой команды перед формулой автоматически добавляется некоторый промежуток.
+ Чтобы исправить это, перед формулой вставляется вертикальный промежуток
  размером –6
 \begin_inset space \thinspace{}
 \end_inset
@@ -37217,10 +37222,10 @@ literal "true"
 
 \shape smallcaps
 F.
- Mittelbach; M.
+ Mittelbach, M.
  Goossens
 \shape default
-: 
+ 
 \shape italic
 The \SpecialChar LaTeX
  Companion
@@ -37241,7 +37246,7 @@ literal "true"
 \begin_inset CommandInset href
 LatexCommand href
 name "Description"
-target "https://www.tug.org/~hvoss/PDF/mathmode.pdf"
+target "http://mirrors.ctan.org/obsolete/info/math/voss/mathmode/Mathmode.pdf"
 literal "false"
 
 \end_inset
@@ -37262,7 +37267,7 @@ literal "true"
 \begin_inset CommandInset href
 LatexCommand href
 name "Description"
-target "https://www.ctan.org/tex-archive/macros/latex/required/amslatex/math/amsldoc.pdf"
+target "http://tug.ctan.org/info/amslatex/english/amsldoc.pdf"
 literal "false"
 
 \end_inset
@@ -37296,7 +37301,7 @@ literal "true"
 \begin_inset CommandInset href
 LatexCommand href
 name "List"
-target "ftp://ftp.dante.de/tex-archive/info/symbols/comprehensive/symbols-a4.pdf"
+target "http://tug.ctan.org/info/symbols/comprehensive/symbols-a4.pdf"
 literal "false"
 
 \end_inset

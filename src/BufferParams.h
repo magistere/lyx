@@ -17,6 +17,7 @@
 
 #include "Citation.h"
 #include "ColorCode.h"
+#include "ColorSet.h"
 #include "DocumentClassPtr.h"
 #include "LayoutModuleList.h"
 #include "paper.h"
@@ -78,7 +79,7 @@ public:
 	/// read a header token, if unrecognised, return it or an unknown class name
 	std::string readToken(Lexer & lex,
 		std::string const & token, ///< token to read.
-		support::FileName const & filepath);
+		support::FileName const & filename);
 
 	///
 	void writeFile(std::ostream &, Buffer const *) const;
@@ -396,7 +397,11 @@ public:
 	///
 	RGBColor notefontcolor;
 	///
+	bool isnotefontcolor;
+	///
 	RGBColor boxbgcolor;
+	///
+	bool isboxbgcolor;
 	/// \param index should lie in the range 0 <= \c index <= 3.
 	Bullet & temp_bullet(size_type index);
 	Bullet const & temp_bullet(size_type index) const;

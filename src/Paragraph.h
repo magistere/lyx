@@ -123,7 +123,8 @@ enum AsStringParameter
 	AS_STR_INSETS = 2, ///< Go into insets.
 	AS_STR_NEWLINES = 4, ///< Get also newline characters.
 	AS_STR_SKIPDELETE = 8, ///< Skip deleted text in change tracking.
-	AS_STR_PLAINTEXT = 16 ///< Don't export formatting when descending into insets.
+	AS_STR_PLAINTEXT = 16, ///< Don't export formatting when descending into insets.
+	AS_STR_MATHED = 32 ///< Use a format suitable for mathed (eg. for InsetRef).
 };
 
 
@@ -203,7 +204,8 @@ public:
 	pos_type firstWordLyXHTML(XMLStream & xs, OutputParams const & runparams) const;
 
 	/// Outputs to stream the DocBook representation, one element per paragraph.
-	std::vector<docstring> simpleDocBookOnePar(Buffer const & buf,
+	std::tuple<std::vector<docstring>, std::vector<docstring>, std::vector<docstring>>
+	simpleDocBookOnePar(Buffer const & buf,
 							                   OutputParams const & runparams,
 							                   Font const & outerfont,
 							                   pos_type initial = 0,

@@ -43,10 +43,10 @@ Menuset
 
 	Menu "file"
 		Item "New|N" "buffer-new"
-		Item "New from Template...|m" "dialog-show lyxfiles templates"
+		Item "New from Template...|m" "lyxfiles-open templates"
 		Item "Open...|O" "file-open"
 		Submenu "Open Recent|t" "file_lastfiles"
-		Item "Open Example...|p" "dialog-show lyxfiles examples"
+		Item "Open Example...|p" "lyxfiles-open examples"
 		Separator
 		Item "Close|C" "buffer-close"
 		Item "Close All" "buffer-close-all"
@@ -338,7 +338,7 @@ Menuset
 	Menu "view"
 		Item "Outline Pane|O" "dialog-toggle toc"
 		Item "Code Preview Pane|P" "dialog-toggle view-source"
-		Item "Messages Pane|g" "dialog-toggle progress"
+		Item "Messages Pane|M" "dialog-toggle progress"
 		Submenu "Toolbars|T" "toolbars"
 		Separator
 		OptItem "Unfold Math Macro|n" "math-macro-unfold"
@@ -381,7 +381,7 @@ Menuset
 		Submenu "Float|a" "insert_float"
 		Submenu "Note|N" "insert_note"
 		Submenu "Branch|B" "insert_branches"
-		Submenu "Custom Inset" "insert_custom"
+		Submenu "Custom Inset|s" "insert_custom"
 		Submenu "File|e" "insert_file"
 		Submenu "Box[[Menu]]|x" "insert_box"
 		OptSubmenu "Regular Expression" "context-edit-regexp"

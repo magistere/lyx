@@ -1,5 +1,5 @@
 #LyX 2.4 created this file. For more info see https://www.lyx.org/
-\lyxformat 600
+\lyxformat 606
 \begin_document
 \begin_header
 \save_transient_properties true
@@ -117,7 +117,7 @@ logicalmkup
 \branch OutDated
 \selected 0
 \filename_suffix 0
-\color #faf0e6
+\color background background
 \end_branch
 \index Stichwortverzeichnis
 \shortcut idx
@@ -8267,6 +8267,93 @@ stdclass.inc
 status collapsed
 
 \begin_layout Plain Layout
+InputGlobal
+\end_layout
+
+\end_inset
+
+ [
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+<Dateiname>
+\end_layout
+
+\end_inset
+
+] ist eine Variante des Befehls 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+, die nicht nach Dateien im Benutzerverzeichnis sucht.
+ Das erlaubt es Ihnen, im Benutzerverzeichnis eine Datei 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+name.layout
+\end_layout
+
+\end_inset
+
+ oder 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+name.inc
+\end_layout
+
+\end_inset
+
+ anzulegen, die mit 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+InputGlobal name
+\end_layout
+
+\end_inset
+
+ bzw.
+ 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+InputGlobal name.inc
+\end_layout
+
+\end_inset
+
+ eine globale Datei desselben Namens einbindet (mit 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+Input
+\end_layout
+
+\end_inset
+
+ würde die Datei sich selbst einbinden).
+ Damit können Sie globale Dateien modifizieren, ohne sie komplett kopieren
+ zu müssen.
+\end_layout
+
+\begin_layout Description
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
 InsetLayout
 \end_layout
 
@@ -8399,6 +8486,41 @@ noprefix "false"
 \end_inset
 
 ).
+\end_layout
+
+\begin_layout Description
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+ModifyInsetLayout
+\end_layout
+
+\end_inset
+
+ [
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+<Typ>
+\end_layout
+
+\end_inset
+
+] Ändert die Eigenschaften des angegebenen Layouts einer Einfügung.
+ Wenn dieses nicht existiert, wird die Anweisung ignoriert.
+ Muss mit 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+End
+\end_layout
+
+\end_inset
+
+ beendet werden.
 \end_layout
 
 \begin_layout Description
@@ -8860,6 +8982,51 @@ status collapsed
 
 \begin_layout Plain Layout
 EndPreamble
+\end_layout
+
+\end_inset
+
+ beendet werden.
+\end_layout
+
+\begin_layout Description
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+ProvideInsetLayout
+\end_layout
+
+\end_inset
+
+ [
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+<Typ>
+\end_layout
+
+\end_inset
+
+] Erstellt das Layout einer Einfügung, falls es noch nicht existiert.
+ Existiert es bereits, wird 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+ProvideInsetLayout
+\end_layout
+
+\end_inset
+
+ ignoriert.
+ Muss mit 
+\begin_inset Flex Code
+status collapsed
+
+\begin_layout Plain Layout
+End
 \end_layout
 
 \end_inset

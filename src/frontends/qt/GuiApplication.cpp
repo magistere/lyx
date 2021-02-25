@@ -490,6 +490,8 @@ IconInfo iconInfo(FuncRequest const & f, bool unknown, bool rtl)
 		name.replace(' ', '_');
 		name.replace(';', '_');
 		name.replace('\\', "backslash");
+		// avoid duplication for these
+		name.replace("dialog-toggle", "dialog-show");
 		names << name;
 
 		// then special default icon for some lfuns
@@ -607,7 +609,8 @@ QPixmap getPixmap(QString const & path, QString const & name, QString const & ex
 	QPixmap pixmap = QPixmap();
 
 	if (pixmap.load(fpath)) {
-		if (fpath.contains("math") || fpath.contains("ipa"))
+		if (fpath.contains("math") || fpath.contains("ipa")
+		    || fpath.contains("bullets"))
 			return prepareForDarkMode(pixmap);
 		return pixmap;
 	}
@@ -945,6 +948,9 @@ struct GuiApplication::Private
 {
 	Private(): language_model_(nullptr), meta_fake_bit(NoModifier),
 		global_menubar_(nullptr)
+	#if (QT_VERSION >= QT_VERSION_CHECK(5, 1, 0))
+		, last_state_(Qt::ApplicationInactive)
+	#endif
 	{
 	#if (QT_VERSION < 0x050000) || (QT_VERSION >= 0x050400)
 	#if defined(Q_OS_WIN) || defined(Q_CYGWIN_WIN)
@@ -1011,6 +1017,10 @@ struct GuiApplication::Private
 
 	/// Only used on mac.
 	QMenuBar * global_menubar_;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 1, 0))
+	/// Holds previous application state on Mac
+	Qt::ApplicationState last_state_;
+#endif
 
 #ifdef Q_OS_MAC
 	/// Linkback mime handler for MacOSX.
@@ -1084,6 +1094,10 @@ GuiApplication::GuiApplication(int & argc, char ** argv)
 	setupApplescript();
 	appleCleanupEditMenu();
 	appleCleanupViewMenu();
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 1, 0))
+	connect(this, SIGNAL(applicationStateChanged(Qt::ApplicationState)),
+			this, SLOT(onApplicationStateChanged(Qt::ApplicationState)));
+#endif
 #endif
 
 #if defined(Q_WS_X11) || defined(QPA_XCB)
@@ -1098,7 +1112,7 @@ GuiApplication::GuiApplication(int & argc, char ** argv)
 
 	// needs to be done before reading lyxrc
 	QWidget w;
-	lyxrc.dpi = (w.logicalDpiX() + w.logicalDpiY()) / 2;
+	lyxrc.dpi = (w.physicalDpiX() + w.physicalDpiY()) / 2;
 
 	guiApp = this;
 
@@ -1367,6 +1381,7 @@ bool GuiApplication::getStatus(FuncRequest const & cmd, FuncStatus & flag) const
 	case LFUN_BUFFER_NEW:
 	case LFUN_BUFFER_NEW_TEMPLATE:
 	case LFUN_FILE_OPEN:
+	case LFUN_LYXFILES_OPEN:
 	case LFUN_HELP_OPEN:
 	case LFUN_SCREEN_FONT_UPDATE:
 	case LFUN_SET_COLOR:
@@ -1479,13 +1494,16 @@ DispatchResult const & GuiApplication::dispatch(FuncRequest const & cmd)
 
 	dr.screenUpdate(Update::FitCursor);
 	{
-		// This handles undo groups automagically
+		// All the code is kept inside the undo group because
+		// updateBuffer can create undo actions (see #11292)
 		UndoGroupHelper ugh(buffer);
 		dispatch(cmd, dr);
-		// redraw the screen at the end (first of the two drawing steps).
-		// This is done unless explicitly requested otherwise.
-		// This code is kept inside the undo group because updateBuffer
-		// can create undo actions (see #11292)
+		if (dr.screenUpdate() & Update::ForceAll) {
+			for (Buffer const * b : theBufferList())
+				b->changed(true);
+			dr.screenUpdate(dr.screenUpdate() & ~Update::ForceAll);
+		}
+
 		updateCurrentView(cmd, dr);
 	}
 
@@ -1751,7 +1769,7 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		//   current_view_ is not null.
 		validateCurrentView();
 		// FIXME: create a new method shared with LFUN_HELP_OPEN.
-		string const fname = to_utf8(cmd.argument());
+		string const fname = trim(to_utf8(cmd.argument()), "\"");
 		bool const is_open = FileName::isAbsolute(fname)
 			&& theBufferList().getBuffer(FileName(fname));
 		if (!current_view_
@@ -1803,6 +1821,25 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		Buffer * buf = current_view_->loadDocument(fname, false);
 		if (buf)
 			buf->setReadonly(!current_view_->develMode());
+		break;
+	}
+
+	case LFUN_LYXFILES_OPEN: {
+		// This is the actual reason for this method (#12106).
+		validateCurrentView();
+		if (!current_view_
+		   || (!lyxrc.open_buffers_in_tabs
+		       && current_view_->documentBufferView() != nullptr))
+			createView();
+		string arg = to_utf8(cmd.argument());
+		if (arg.empty())
+			// set default
+			arg = "templates";
+		if (arg != "templates" && arg != "examples") {
+			current_view_->message(_("Wrong argument. Must be 'examples' or 'templates'."));
+			break;
+		}
+		lyx::dispatch(FuncRequest(LFUN_DIALOG_SHOW, "lyxfiles " + arg));
 		break;
 	}
 
@@ -2173,6 +2210,11 @@ void GuiApplication::dispatch(FuncRequest const & cmd, DispatchResult & dr)
 		if (current_view_)
 			current_view_->dispatch(cmd, dr);
 		break;
+	}
+
+	if (current_view_ && current_view_->isFullScreen()) {
+		if (current_view_->menuBar()->isVisible() && lyxrc.full_screen_menubar)
+			current_view_->menuBar()->hide();
 	}
 
 	if (cmd.origin() == FuncRequest::LYXSERVER)
@@ -2895,6 +2937,11 @@ bool GuiApplication::notify(QObject * receiver, QEvent * event)
 	return false;
 }
 
+bool GuiApplication::isInDarkMode()
+{
+	return colorCache().isDarkMode();
+}
+
 
 bool GuiApplication::getRgbColor(ColorCode col, RGBColor & rgbcol)
 {
@@ -3278,6 +3325,36 @@ void GuiApplication::onLastWindowClosed()
 	if (d->global_menubar_)
 		d->global_menubar_->grabKeyboard();
 }
+
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 1, 0))
+void GuiApplication::onApplicationStateChanged(Qt::ApplicationState state)
+{
+	std::string name = "unknown";
+	switch (state) {
+	case Qt::ApplicationSuspended:
+		name = "ApplicationSuspended";
+		break;
+	case Qt::ApplicationHidden:
+		name = "ApplicationHidden";
+		break;
+	case Qt::ApplicationInactive:
+		name = "ApplicationInactive";
+		break;
+	case Qt::ApplicationActive:
+		name = "ApplicationActive";
+		/// The Dock icon click produces 2 sequential QEvent::ApplicationStateChangeEvent events.
+		/// cmd+tab only one QEvent::ApplicationStateChangeEvent event
+		if (d->views_.empty() && d->last_state_ == state) {
+			LYXERR(Debug::GUI, "Open new window...");
+			createView();
+		}
+		break;
+	}
+	LYXERR(Debug::GUI, "onApplicationStateChanged..." << name);
+	d->last_state_ = state;
+}
+#endif
 
 
 void GuiApplication::startLongOperation() {

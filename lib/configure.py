@@ -224,11 +224,9 @@ def checkTeXPaths():
         inpname = inpname.replace('~', '\\string~')
         os.write(fd, b'\\relax')
         os.close(fd)
-        latex_out = cmdOutput(r'latex "\nonstopmode\input{%s}\makeatletter\@@end"'
-                              % inpname)
+        latex_out = cmdOutput(r'latex "\nonstopmode\input{%s}\makeatletter\@@end"' % inpname)
         if 'Error' in latex_out:
-            latex_out = cmdOutput(r'latex "\nonstopmode\input{\"%s\"}\makeatletter\@@end"'
-                                  % inpname)
+            latex_out = cmdOutput(r'latex "\nonstopmode\input{\"%s\"}\makeatletter\@@end"' % inpname)
         if 'Error' in latex_out:
             logger.warning("configure: TeX engine needs posix-style paths in latex files")
             windows_style_tex_paths = 'false'
@@ -240,7 +238,7 @@ def checkTeXPaths():
 
 
 ## Searching some useful programs
-def checkProg(description, progs, rc_entry = [], path = [], not_found = ''):
+def checkProg(description, progs, rc_entry=None, path=None, not_found =''):
     '''
         This function will search a program in $PATH plus given path
         If found, return directory and program name (not the options).
@@ -266,13 +264,18 @@ def checkProg(description, progs, rc_entry = [], path = [], not_found = ''):
             was found
 
     '''
+    if path is None:
+        path = []
+    if rc_entry is None:
+        rc_entry = []
+
     # one rc entry for each progs plus not_found entry
     if len(rc_entry) > 1 and len(rc_entry) != len(progs) + 1:
         logger.error("rc entry should have one item or item "
                      "for each prog and not_found.")
         sys.exit(2)
     logger.info('checking for ' + description + '...')
-    ## print '(' + ','.join(progs) + ')',
+    logger.debug('(' + ','.join(progs) + ')')
     additional_path = path
     path = os.environ["PATH"].split(os.pathsep) + additional_path
     extlist = ['']
@@ -315,25 +318,64 @@ def checkProg(description, progs, rc_entry = [], path = [], not_found = ''):
                         addToRC(rc_entry[idx].replace('%%', ac_prog))
                     return [ac_dir, ac_word]
         # if not successful
-        logger.info(msg + ' no')
+        logger.info(msg + ' not in path')
     # write rc entries for 'not found'
     if len(rc_entry) > 0:  # the last one.
         addToRC(rc_entry[-1].replace('%%', not_found))
     return ['', not_found]
 
 
-def checkProgAlternatives(description, progs, rc_entry = [],
-                          alt_rc_entry = [], path = [], not_found = ''):
+def check_java():
+    """ Check for Java, don't give up as often as checkProg, using platform-dependent techniques """
+    if os.name == 'nt':
+        # Check in the registry.
+        try:  # Python 3.
+            import winreg
+        except ImportError:  # Python 2.
+            import _winreg as winreg
+
+        potential_keys_64b = ["SOFTWARE\\JavaSoft\\Java Runtime Environment", "SOFTWARE\\JavaSoft\\Java Development Kit",
+                              "SOFTWARE\\JavaSoft\\JDK", "SOFTWARE\\JavaSoft\\JRE"]
+        potential_keys_32b = [k.replace('SOFTWARE', 'SOFTWARE\\WOW6432Node') for k in potential_keys_64b]
+        potential_keys = potential_keys_64b + potential_keys_32b
+
+        reg_hive = winreg.HKEY_LOCAL_MACHINE
+        for key in potential_keys:
+            try:
+                with winreg.OpenKey(reg_hive, key) as reg_key:
+                    version = winreg.QueryValueEx(reg_key, "CurrentVersion")[0]
+                with winreg.OpenKey(reg_hive, key + '\\' + version) as reg_key:
+                    java_bin = winreg.QueryValueEx(reg_key, "JavaHome")[0] + '\\bin\\java.exe'
+                    logger.info('+checking for java: found in Windows registry, ' + str(java_bin))
+                    return java_bin
+            except OSError:
+                pass
+
+        # The test failed, no Java found.
+        return ''
+    else:
+        return ''
+
+
+def checkProgAlternatives(description, progs, rc_entry=None,
+                          alt_rc_entry=None, path=None, not_found=''):
     '''
         The same as checkProg, but additionally, all found programs will be added
         as alt_rc_entries
     '''
+    if path is None:
+        path = []
+    if alt_rc_entry is None:
+        alt_rc_entry = []
+    if rc_entry is None:
+        rc_entry = []
+
     # one rc entry for each progs plus not_found entry
     if len(rc_entry) > 1 and len(rc_entry) != len(progs) + 1:
         logger.error("rc entry should have one item or item for each prog and not_found.")
         sys.exit(2)
     logger.info('checking for ' + description + '...')
-    ## print '(' + ','.join(progs) + ')',
+    logger.debug('(' + ','.join(progs) + ')')
     additional_path = path
     path = os.environ["PATH"].split(os.pathsep) + additional_path
     extlist = ['']
@@ -403,7 +445,7 @@ def checkProgAlternatives(description, progs, rc_entry = [],
                     break
             if found_alt:
                 break
-        if found_alt == False:
+        if not found_alt:
             # if not successful
             logger.info(msg + ' no')
     if found_prime:
@@ -441,11 +483,14 @@ def addAlternatives(rcs, alt_type):
     return alt
 
 
-def listAlternatives(progs, alt_type, rc_entry = []):
+def listAlternatives(progs, alt_type, rc_entry=None):
     '''
         Returns a list of \\prog_alternatives strings to be used as alternative
         rc entries.  alt_type can be a string or a list of strings.
     '''
+    if rc_entry is None:
+        rc_entry = []
+
     if len(rc_entry) > 1 and len(rc_entry) != len(progs) + 1:
         logger.error("rc entry should have one item or item for each prog and not_found.")
         sys.exit(2)
@@ -462,38 +507,63 @@ def listAlternatives(progs, alt_type, rc_entry = []):
     return alt_rc_entry
 
 
-def checkViewer(description, progs, rc_entry = [], path = []):
+def checkViewer(description, progs, rc_entry=None, path=None):
     ''' The same as checkProgAlternatives, but for viewers '''
+    if path is None:
+        path = []
+    if rc_entry is None:
+        rc_entry = []
+
     alt_rc_entry = listAlternatives(progs, 'viewer', rc_entry)
     return checkProgAlternatives(description, progs, rc_entry,
                                  alt_rc_entry, path, not_found = 'auto')
 
 
-def checkEditor(description, progs, rc_entry = [], path = []):
+def checkEditor(description, progs, rc_entry=None, path=None):
     ''' The same as checkProgAlternatives, but for editors '''
+    if path is None:
+        path = []
+    if rc_entry is None:
+        rc_entry = []
+
     alt_rc_entry = listAlternatives(progs, 'editor', rc_entry)
     return checkProgAlternatives(description, progs, rc_entry,
                                  alt_rc_entry, path, not_found = 'auto')
 
 
-def checkViewerNoRC(description, progs, rc_entry = [], path = []):
+def checkViewerNoRC(description, progs, rc_entry=None, path=None):
     ''' The same as checkViewer, but do not add rc entry '''
+    if path is None:
+        path = []
+    if rc_entry is None:
+        rc_entry = []
+
     alt_rc_entry = listAlternatives(progs, 'viewer', rc_entry)
     rc_entry = []
     return checkProgAlternatives(description, progs, rc_entry,
                                  alt_rc_entry, path, not_found = 'auto')
 
 
-def checkEditorNoRC(description, progs, rc_entry = [], path = []):
+def checkEditorNoRC(description, progs, rc_entry=None, path=None):
     ''' The same as checkViewer, but do not add rc entry '''
+    if rc_entry is None:
+        rc_entry = []
+    if path is None:
+        path = []
+
     alt_rc_entry = listAlternatives(progs, 'editor', rc_entry)
     rc_entry = []
     return checkProgAlternatives(description, progs, rc_entry,
                                  alt_rc_entry, path, not_found = 'auto')
 
 
-def checkViewerEditor(description, progs, rc_entry = [], path = []):
+def checkViewerEditor(description, progs, rc_entry=None, path=None):
     ''' The same as checkProgAlternatives, but for viewers and editors '''
+    if rc_entry is None:
+        rc_entry = []
+    if path is None:
+        path = []
+
     alt_rc_entry = listAlternatives(progs, ['editor', 'viewer'], rc_entry)
     return checkProgAlternatives(description, progs, rc_entry,
                                  alt_rc_entry, path, not_found = 'auto')
@@ -683,6 +753,7 @@ def checkFormatEntries(dtl_tools):
 \Format docbook5   xml    "DocBook 5"             "" ""	"%%"	"document,menu=export"	"application/docbook+xml"
 \Format dot        dot    "Graphviz Dot"          "" ""	"%%"	"vector"	"text/vnd.graphviz"
 \Format dviluatex  tex    "LaTeX (dviluatex)"     "" "" "%%"	"document,menu=export"	""
+\Format epub       epub    ePub                   "" "" "%%"    "document,menu=export"  "application/epub+zip"
 \Format platex     tex    "LaTeX (pLaTeX)"        "" "" "%%" 	"document,menu=export"	""
 \Format literate   nw      NoWeb                  N  ""	"%%"	"document,menu=export"	""
 \Format sweave     Rnw    "Sweave"                S  "" "%%"	"document,menu=export"	""
@@ -934,6 +1005,17 @@ def checkConverterEntries():
     #
     checkProg('DocBook converter -> PDF (docbook)', ['pandoc -f docbook -t latex --latex-engine=lualatex --toc -o $$o $$i'],
         rc_entry = [ r'\converter docbook5      pdf9      "%%"	""' ])
+    #
+    xpath, xslt_sheet = checkProg('XSLT stylesheets for ePub', ['chunk.xsl'], '', ['/usr/share/xml/docbook/stylesheet/docbook-xsl-ns/epub3'])
+    if xslt_sheet == 'chunk.xsl':
+        xpath = '/usr/share/xml/docbook/stylesheet/docbook-xsl-ns'
+    else:
+        xpath = 'none'
+    global java
+    if xsltproc != '':
+        addToRC('\\converter docbook5 epub "python $$s/scripts/docbook2epub.py none none \\"' + xsltproc + '\\" ' + xpath + ' $$i $$r $$o" ""')
+    elif java != '':
+        addToRC('\\converter docbook5 epub "python $$s/scripts/docbook2epub.py \\"' + java + '\\" none none ' + xpath + ' $$i $$r $$o" ""')
     #
     checkProg('a MS Word Office Open XML converter -> LaTeX', ['pandoc -s -f docx -o $$o -t latex $$i'],
         rc_entry = [ r'\converter word2      latex      "%%"	""' ])
@@ -1270,7 +1352,6 @@ def checkConverterEntries():
 \converter klyx       lyx        "python -tt $$s/lyx2lyx/lyx2lyx -c euc_kr -o $$o $$i"	""
 \converter lyxpreview png        "python -tt $$s/scripts/lyxpreview2bitmap.py --png"	""
 \converter lyxpreview ppm        "python -tt $$s/scripts/lyxpreview2bitmap.py --ppm"	""
-\converter docbook    docbook5   "cp $$i $$o"	"xml"
 ''')
 
 
@@ -1863,7 +1944,7 @@ if __name__ == '__main__':
     lyx_check_config = True
     lyx_kpsewhich = True
     outfile = 'lyxrc.defaults'
-    lyxrc_fileformat = 34
+    lyxrc_fileformat = 36
     rc_entries = ''
     lyx_keep_temps = False
     version_suffix = ''
@@ -1923,7 +2004,10 @@ Format %i
     LATEX = checkLatex(dtl_tools)
     # check java and perl before any checkProg that may require them
     java = checkProg('a java interpreter', ['java'])[1]
+    if java == '':
+        java = check_java()
     perl = checkProg('a perl interpreter', ['perl'])[1]
+    xsltproc = checkProg('xsltproc', ['xsltproc'])[1]
     (inkscape_path, inkscape_gui) = os.path.split(checkInkscape())
     # On Windows, we need to call the "inkscape.com" wrapper
     # for command line purposes. Other OSes do not differentiate.

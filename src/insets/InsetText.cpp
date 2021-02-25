@@ -327,13 +327,14 @@ void InsetText::doDispatch(Cursor & cur, FuncRequest & cmd)
 			|| cmd.getArg(0) == insetName(lyxCode());
 
 		if (!main_inset && target_inset) {
+			UndoGroupHelper ugh(&buffer());
 			// Text::dissolveInset assumes that the cursor
 			// is inside the Inset.
-			if (&cur.inset() != this)
+			if (&cur.inset() != this) {
+				cur.recordUndo();
 				cur.pushBackward(*this);
-			cur.beginUndoGroup();
+			}
 			text_.dispatch(cur, cmd);
-			cur.endUndoGroup();
 		} else
 			cur.undispatched();
 		break;
@@ -635,7 +636,7 @@ void InsetText::docbook(XMLStream & xs, OutputParams const & rp, XHTMLOptions op
 		writeOuterTag = !allBibitems;
 	}
 
-	// Detect arguments that should be output before the paragraph.
+	// Detect arguments that should be output before/after the paragraph.
 	// Don't reuse runparams.docbook_prepended_arguments, as the same object is used in InsetArgument to determine
 	// whether the inset should be output or not, whatever the context (i.e. position with respect to the wrapper).
 	std::set<InsetArgument const *> prependedArguments;
@@ -645,6 +646,17 @@ void InsetText::docbook(XMLStream & xs, OutputParams const & rp, XHTMLOptions op
 				InsetArgument const *arg = par.getInset(i)->asInsetArgument();
 				if (arg->docbookargumentbeforemaintag())
 					prependedArguments.insert(par.getInset(i)->asInsetArgument());
+			}
+		}
+	}
+
+	std::set<InsetArgument const *> appendedArguments;
+	for (auto const & par : paragraphs()) {
+		for (pos_type i = 0; i < par.size(); ++i) {
+			if (par.getInset(i) && par.getInset(i)->lyxCode() == ARG_CODE) {
+				InsetArgument const *arg = par.getInset(i)->asInsetArgument();
+				if (arg->docbookargumentaftermaintag())
+                    appendedArguments.insert(par.getInset(i)->asInsetArgument());
 			}
 		}
 	}
@@ -665,14 +677,15 @@ void InsetText::docbook(XMLStream & xs, OutputParams const & rp, XHTMLOptions op
 		}
 	}
 
-	// - Think about the arguments.
+	// - Think about the arguments before the paragraph.
 	OutputParams np = runparams;
 	np.docbook_in_par = true;
 	for (auto const & arg : prependedArguments)
 		arg->docbook(xs, np);
 
-	// - Mark the newly generated arguments are not-to-be-generated-again.
+	// - Mark the newly generated arguments are not-to-be-generated-again. Do the same for arguments that will follow.
 	runparams.docbook_prepended_arguments = std::move(prependedArguments);
+	runparams.docbook_appended_arguments = appendedArguments;
 
 	// - Deal with the first item.
 	// TODO: in things like SciPoster, this should also check if the item tag is allowed. Hard to formalise for now...
@@ -696,6 +709,10 @@ void InsetText::docbook(XMLStream & xs, OutputParams const & rp, XHTMLOptions op
 	xs.startDivision(false);
 	docbookParagraphs(text_, buffer(), xs, runparams);
 	xs.endDivision();
+
+	// - Think about the arguments after the paragraph.
+	for (auto const & arg : appendedArguments)
+		arg->docbook(xs, np);
 
 	// - Close the required tags.
 	if (writeOuterTag) {
@@ -977,7 +994,7 @@ void InsetText::updateBuffer(ParIterator const & it, UpdateType utype, bool cons
 			cnt.restoreLastLayout();
 			// FIXME cnt.restoreLastCounter()?
 		}
-		// Record in this inset is embedded in a title layout
+		// Record if this inset is embedded in a title layout
 		// This is needed to decide when \maketitle is output.
 		intitle_context_ = it.paragraph().layout().intitle;
 		// Also check embedding layouts
@@ -1184,7 +1201,8 @@ bool InsetText::automaticPopupCompletion() const
 
 bool InsetText::showCompletionCursor() const
 {
-	return lyxrc.completion_cursor_text;
+	return lyxrc.completion_cursor_text &&
+		(lyxrc.completion_inline_text || lyxrc.completion_popup_text);
 }
 
 

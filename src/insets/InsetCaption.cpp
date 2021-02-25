@@ -53,8 +53,7 @@ namespace lyx {
 
 
 InsetCaption::InsetCaption(Buffer * buf, string const & type)
-    : InsetText(buf, InsetText::PlainLayout),
-      labelwidth_(0), is_subfloat_(false), is_deleted_(false), type_(type)
+    : InsetText(buf, InsetText::PlainLayout), type_(type)
 {
 	setDrawFrame(true);
 	setFrameColor(Color_collapsibleframe);
@@ -83,7 +82,8 @@ void InsetCaption::cursorPos(BufferView const & bv,
 		CursorSlice const & sl, bool boundary, int & x, int & y) const
 {
 	InsetText::cursorPos(bv, sl, boundary, x, y);
-	x += labelwidth_;
+	if (!rtl_)
+		x += labelwidth_;
 }
 
 
@@ -134,6 +134,8 @@ void InsetCaption::drawBackground(PainterInfo & pi, int x, int y) const
 	TextMetrics & tm = pi.base.bv->textMetrics(&text());
 	int const h = tm.height() + topOffset(pi.base.bv) + bottomOffset(pi.base.bv);
 	int const yy = y - topOffset(pi.base.bv) - tm.ascent();
+	if (rtl_)
+		x+= + dimension(*pi.base.bv).wid - labelwidth_;
 	pi.pain.fillRectangle(x, yy, labelwidth_, h, pi.backgroundColor(this));
 }
 
@@ -148,6 +150,7 @@ void InsetCaption::draw(PainterInfo & pi, int x, int y) const
 
 	// Answer: the text inset (in buffer_funcs.cpp: setCaption).
 
+	rtl_ = !pi.ltr_pos;
 	FontInfo tmpfont = pi.base.font;
 	pi.base.font = pi.base.bv->buffer().params().getFont().fontInfo();
 	pi.base.font.setColor(pi.textColor(pi.base.font.color()).baseColor);
@@ -155,9 +158,15 @@ void InsetCaption::draw(PainterInfo & pi, int x, int y) const
 		pi.base.font.setStrikeout(FONT_ON);
 	else if (isChanged() && lyxrc.ct_additions_underlined)
 		pi.base.font.setUnderbar(FONT_ON);
-	int const xx = x + leftOffset(pi.base.bv);
-	pi.pain.text(xx, y, full_label_, pi.base.font);
-	InsetText::draw(pi, x + labelwidth_, y);
+	int const lo = leftOffset(pi.base.bv);
+	if (rtl_) {
+		InsetText::draw(pi, x, y);
+		pi.pain.text(x + dimension(*pi.base.bv).wid - labelwidth_ + lo,
+		             y, full_label_, pi.base.font);
+	} else {
+		pi.pain.text(x + lo, y, full_label_, pi.base.font);
+		InsetText::draw(pi, x + labelwidth_, y);
+	}
 	pi.base.font = tmpfont;
 }
 
@@ -433,10 +442,9 @@ void InsetCaption::updateBuffer(ParIterator const & it, UpdateType utype, bool c
 				sec += from_ascii(" ");
 			sec += bformat(from_ascii("(%1$s)"), labelstring);
 		}
-		if (!sec.empty())
-			full_label_ = bformat(from_ascii("%1$s %2$s: "), name, sec);
-		else
-			full_label_ = bformat(from_ascii("%1$s #: "), name);
+		if (sec.empty())
+			sec = from_ascii("#");
+		full_label_ = bformat(master.B_("%1$s %2$s: [[Caption label (ex. Figure 1: )]]"), name, sec);
 	}
 
 	// Do the real work now.

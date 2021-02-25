@@ -60,7 +60,7 @@ namespace {
 
 // The format should also be updated in configure.py, and conversion code
 // should be added to prefs2prefs_prefs.py.
-static unsigned int const LYXRC_FILEFORMAT = 35; // spitz: dark mode colors
+static unsigned int const LYXRC_FILEFORMAT = 36; // rkh: spellcheck_continuously default
 // when adding something to this array keep it sorted!
 LexerKeyword lyxrcTags[] = {
 	{ "\\accept_compound", LyXRC::RC_ACCEPT_COMPOUND },
@@ -2729,8 +2729,9 @@ void LyXRC::write(ostream & os, bool ignore_system_lyxrc, string const & name) c
 			break;
 		// fall through
 	case RC_DEFAULT_VIEW_FORMAT:
-		if (ignore_system_lyxrc ||
-		    default_view_format != system_lyxrc.default_view_format) {
+		if ((ignore_system_lyxrc ||
+			default_view_format != system_lyxrc.default_view_format)
+			&& !default_view_format.empty()) {
 			os << "\\default_view_format " << default_view_format << '\n';
 		}
 		if (tag != RC_LAST)

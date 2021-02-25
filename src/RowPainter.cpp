@@ -457,14 +457,16 @@ void RowPainter::paintTopLevelLabel() const
 
 	double x = x_;
 	if (layout.labeltype == LABEL_CENTERED) {
+		// The 'size + 1' is weird, but it makes sure that we get the
+		// left margin of non-first row.
+		int leftm = tm_.leftMargin(row_.pit(), par_.size() + 1);
+		int rightm = tm_.rightMargin(row_.pit());
+		if (row_.isRTL())
+			swap(leftm, rightm);
 		/* Currently, x points at row_.left_margin (which contains the
 		 * indent). First remove that, and then center the title with
 		 * respect to the left and right margins.
 		 */
-		int const leftm = row_.isRTL() ? tm_.rightMargin(row_.pit())
-		                               : tm_.leftMargin(row_.pit());
-		int const rightm = row_.isRTL() ? tm_.leftMargin(row_.pit())
-			                            : tm_.rightMargin(row_.pit());
 		x += leftm - row_.left_margin + (tm_.width() - leftm -rightm) / 2
 			- fm.width(str) / 2;
 	} else if (row_.isRTL()) {
@@ -509,8 +511,8 @@ void RowPainter::paintLast() const
 		FontInfo const font = labelFont(true);
 		FontMetrics const & fm = theFontMetrics(font);
 		docstring const & str = par_.layout().endlabelstring();
-		double const x = row_.isRTL() ? x_ - fm.width(str) : x_;
-		pi_.pain.text(int(x), yo_, str, font);
+		double const x = row_.isRTL() ? row_.left_margin - fm.width(str) : row_.width();
+		pi_.pain.text(xo_ + x, yo_, str, font);
 		break;
 	}
 
@@ -577,8 +579,10 @@ void RowPainter::paintSelection() const
 	if (!row_.selection())
 		return;
 
-	int const y1 = yo_ - row_.ascent();
-	int const y2 = y1 + row_.height();
+	int const y1 = yo_ - (row_.begin_margin_sel ? row_.ascent()
+	                                            : row_.contents_dim().asc);
+	int const y2 = yo_ + (row_.end_margin_sel ? row_.descent()
+	                                          : row_.contents_dim().des);
 
 	// draw the margins
 	if (row_.isRTL() ? row_.end_margin_sel : row_.begin_margin_sel)

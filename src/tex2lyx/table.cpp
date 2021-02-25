@@ -934,6 +934,67 @@ void handle_hline_below(RowInfo & ri, vector<CellInfo> & ci)
 }
 
 
+void parse_cell_content(ostringstream & os2, Parser & parse, unsigned int flags, Context & newcontext,
+			vector< vector<CellInfo> > & cellinfo, vector<ColInfo> & colinfo,
+			size_t const row, size_t const col)
+{
+	bool turn = false;
+	int rotate = 0;
+	bool varwidth = false;
+	if (parse.next_token().cs() == "begin") {
+		parse.pushPosition();
+		parse.get_token();
+		string const env = parse.getArg('{', '}');
+		if (env == "sideways" || env == "turn") {
+			string angle = "90";
+			if (env == "turn") {
+				turn = true;
+				angle = parse.getArg('{', '}');
+			}
+			active_environments.push_back(env);
+			parse.ertEnvironment(env);
+			active_environments.pop_back();
+			parse.skip_spaces();
+			if (!parse.good() && support::isStrInt(angle))
+				rotate = convert<int>(angle);
+		} else if (env == "cellvarwidth") {
+			active_environments.push_back(env);
+			parse.ertEnvironment(env);
+			active_environments.pop_back();
+			parse.skip_spaces();
+			varwidth = true;
+		}
+		parse.popPosition();
+	}
+	if (rotate != 0) {
+		cellinfo[row][col].rotate = rotate;
+		parse.get_token();
+		active_environments.push_back(parse.getArg('{', '}'));
+		if (turn)
+			parse.getArg('{', '}');
+		parse_text_in_inset(parse, os2, FLAG_END, false, newcontext);
+		active_environments.pop_back();
+		preamble.registerAutomaticallyLoadedPackage("rotating");
+	} else if (varwidth) {
+		parse.get_token();
+		active_environments.push_back(parse.getArg('{', '}'));
+		// valign arg
+		if (parse.hasOpt())
+			cellinfo[row][col].valign = parse.getArg('[', ']')[1];
+		newcontext.in_table_cell = true;
+		parse_text_in_inset(parse, os2, FLAG_END, false, newcontext);
+		if (cellinfo[row][col].multi == CELL_NORMAL)
+			colinfo[col].align = newcontext.cell_align;
+		else
+			cellinfo[row][col].align = newcontext.cell_align;
+		active_environments.pop_back();
+		preamble.registerAutomaticallyLoadedPackage("varwidth");
+	} else {
+		parse_text_in_inset(parse, os2, flags, false, newcontext);
+	}
+}
+
+
 } // anonymous namespace
 
 
@@ -941,6 +1002,7 @@ void handle_tabular(Parser & p, ostream & os, string const & name,
 		    string const & tabularwidth, string const & halign,
 		    Context const & context)
 {
+	Context newcontext = context;
 	bool const is_long_tabular(name == "longtable" || name == "xltabular");
 	bool booktabs = false;
 	string tabularvalignment("middle");
@@ -1273,7 +1335,7 @@ void handle_tabular(Parser & p, ostream & os, string const & name,
 					parse.skip_spaces(true);
 				}
 
-				if (width != "*")
+				if (width != "*" && width != "=")
 					colinfo[col].width = width;
 				if (!vmove.empty())
 					cellinfo[row][col].mroffset = vmove;
@@ -1283,7 +1345,11 @@ void handle_tabular(Parser & p, ostream & os, string const & name,
 				cellinfo[row][col].mrxnum = ncells - 1;
 
 				ostringstream os2;
-				parse_text_in_inset(parse, os2, FLAG_ITEM, false, context);
+				parse.get_token();// skip {
+				parse_cell_content(os2, parse, FLAG_BRACE_LAST, newcontext,
+							cellinfo, colinfo,
+							row, col);
+				parse.get_token();// skip }
 				if (!cellinfo[row][col].content.empty()) {
 					// This may or may not work in LaTeX,
 					// but it does not work in LyX.
@@ -1320,7 +1386,11 @@ void handle_tabular(Parser & p, ostream & os, string const & name,
 				cellinfo[row][col].leftlines  = ci.leftlines;
 				cellinfo[row][col].rightlines = ci.rightlines;
 				ostringstream os2;
-				parse_text_in_inset(parse, os2, FLAG_ITEM, false, context);
+				parse.get_token();// skip {
+				parse_cell_content(os2, parse, FLAG_BRACE_LAST, newcontext,
+							cellinfo, colinfo,
+							row, col);
+				parse.get_token();// skip }
 				if (!cellinfo[row][col].content.empty()) {
 					// This may or may not work in LaTeX,
 					// but it does not work in LyX.
@@ -1378,49 +1448,50 @@ void handle_tabular(Parser & p, ostream & os, string const & name,
 				cellinfo[row][col].align      = colinfo[col].align;
 				cellinfo[row][col].multi      = CELL_BEGIN_OF_MULTICOLUMN;
 				ostringstream os2;
-				parse_text_in_inset(parse, os2, FLAG_CELL, false, context);
+				parse_text_in_inset(parse, os2, FLAG_CELL, false, newcontext);
+				cellinfo[row][col].content += os2.str();
+				// add dummy multicolumn cells
+				for (size_t c = 1; c < colinfo.size(); ++c)
+					cellinfo[row][c].multi = CELL_PART_OF_MULTICOLUMN;
+			} else if (col == 0 && colinfo.size() > 1 &&
+			           is_long_tabular &&
+			           parse.next_token().cs() == "caption") {
+				// longtable caption support in LyX is a hack:
+				// Captions require a row of their own with
+				// the caption flag set to true, having only
+				// one multicolumn cell. The contents of that
+				// cell must contain exactly one caption inset
+				// and nothing else.
+				// Fortunately, the caption flag is only needed
+				// for tables with more than one column.
+				rowinfo[row].caption = true;
+				for (size_t c = 1; c < cells.size(); ++c) {
+					if (!cells[c].empty()) {
+						cerr << "Moving cell content '"
+						     << cells[c]
+						     << "' into the caption cell. "
+							"This will probably not work."
+						     << endl;
+						cells[0] += cells[c];
+					}
+				}
+				cells.resize(1);
+				cellinfo[row][col].align      = colinfo[col].align;
+				cellinfo[row][col].multi      = CELL_BEGIN_OF_MULTICOLUMN;
+				ostringstream os2;
+				parse_text_in_inset(parse, os2, FLAG_CELL, false, newcontext);
 				cellinfo[row][col].content += os2.str();
 				// add dummy multicolumn cells
 				for (size_t c = 1; c < colinfo.size(); ++c)
 					cellinfo[row][c].multi = CELL_PART_OF_MULTICOLUMN;
 			} else {
-				bool turn = false;
-				int rotate = 0;
-				if (parse.next_token().cs() == "begin") {
-					parse.pushPosition();
-					parse.get_token();
-					string const env = parse.getArg('{', '}');
-					if (env == "sideways" || env == "turn") {
-						string angle = "90";
-						if (env == "turn") {
-							turn = true;
-							angle = parse.getArg('{', '}');
-						}
-						active_environments.push_back(env);
-						parse.ertEnvironment(env);
-						active_environments.pop_back();
-						parse.skip_spaces();
-						if (!parse.good() && support::isStrInt(angle))
-							rotate = convert<int>(angle);
-					}
-					parse.popPosition();
-				}
+				ostringstream os2;
+				parse_cell_content(os2, parse, FLAG_CELL, newcontext,
+							cellinfo, colinfo,
+							row, col);
 				cellinfo[row][col].leftlines  = colinfo[col].leftlines;
 				cellinfo[row][col].rightlines = colinfo[col].rightlines;
 				cellinfo[row][col].align      = colinfo[col].align;
-				ostringstream os2;
-				if (rotate != 0) {
-					cellinfo[row][col].rotate = rotate;
-					parse.get_token();
-					active_environments.push_back(parse.getArg('{', '}'));
-					if (turn)
-						parse.getArg('{', '}');
-					parse_text_in_inset(parse, os2, FLAG_END, false, context);
-					active_environments.pop_back();
-					preamble.registerAutomaticallyLoadedPackage("rotating");
-				} else {
-					parse_text_in_inset(parse, os2, FLAG_CELL, false, context);
-				}
 				cellinfo[row][col].content += os2.str();
 			}
 		}

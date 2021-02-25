@@ -19,23 +19,12 @@ dist_noinst_DATA = \
 	fonts/test/check_glyphs.lyx \
 	images/README \
 	images/font-smallcaps.svgz \
-	images/math/ams_arrows.png \
-	images/math/ams_misc.png \
-	images/math/ams_nrel.png \
-	images/math/ams_ops.png \
-	images/math/ams_rel.png \
-	images/math/arrows.png \
-	images/math/bop.png \
-	images/math/brel.png \
 	images/math/deco.svgz \
 	images/math/delim0.svgz \
 	images/math/delim1.svgz \
 	images/math/delim.svgz \
 	images/math/dots.svgz \
-	images/math/font.svgz \
-	images/math/greek.png \
-	images/math/misc.png \
-	images/math/varsz.png
+	images/math/font.svgz
 
 skbinddir = $(pkgdatadir)/bind/sk
 dist_skbind_DATA = \
@@ -594,13 +583,13 @@ dist_images_DATA1X = \
 	images/dialog-show-new-inset_ref.svgz \
 	images/dialog-show_character.svgz \
 	images/dialog-show_findreplace.svgz \
+	images/dialog-show_findreplaceadv.svgz \
 	images/dialog-show_mathdelimiter.svgz \
 	images/dialog-show_mathmatrix.svgz \
 	images/dialog-show_print.svgz \
 	images/dialog-show_spellchecker.svgz \
+	images/dialog-show_toc.svgz \
 	images/dialog-show_vclog.svgz \
-	images/dialog-toggle_findreplaceadv.svgz \
-	images/dialog-toggle_toc.svgz \
 	images/down.svgz \
 	images/dynamic-char-styles.svgz \
 	images/dynamic-custom-insets.svgz \
@@ -669,6 +658,12 @@ dist_images_DATA1X = \
 	images/paste.svgz \
 	images/redo.svgz \
 	images/reload.svgz \
+	images/search-case-sensitive.svgz \
+	images/search-instant.svgz \
+	images/search-options.svgz \
+	images/search-selection.svgz \
+	images/search-whole-words.svgz \
+	images/search-wrap.svgz \
 	images/script-insert_subscript.svgz \
 	images/script-insert_superscript.svgz \
 	images/specialchar-insert_latex.svgz \
@@ -739,13 +734,7 @@ dist_images_DATA2X = \
 	images/banner@2x.png
 
 dist_images_DATA = \
-	images/amssymb.png \
 	images/banner.png \
-	images/psnfss1.png \
-	images/psnfss2.png \
-	images/psnfss3.png \
-	images/psnfss4.png \
-	images/standard.png \
 	$(dist_images_DATA1X) \
 	$(dist_images_DATA2X) \
 	$(dist_images_DATA3X)
@@ -1614,6 +1603,190 @@ dist_imagesmath_DATA = \
 	images/math/Yup.svgz \
 	images/math/zeta.svgz
 
+imagesbulletsdir = $(imagesdir)/bullets
+dist_imagesbullets_DATA = \
+	images/bullets/ast.svgz \
+	images/bullets/bfendash.svgz \
+	images/bullets/bigtriangledown.svgz \
+	images/bullets/bigtriangleup.svgz \
+	images/bullets/box.svgz \
+	images/bullets/bullet.svgz \
+	images/bullets/cdot.svgz \
+	images/bullets/circ.svgz \
+	images/bullets/clubsuit.svgz \
+	images/bullets/dagger.svgz \
+	images/bullets/dashv.svgz \
+	images/bullets/diamondsuit.svgz \
+	images/bullets/diamond.svgz \
+	images/bullets/diamond2.svgz \
+	images/bullets/ding100.svgz \
+	images/bullets/ding101.svgz \
+	images/bullets/ding102.svgz \
+	images/bullets/ding103.svgz \
+	images/bullets/ding104.svgz \
+	images/bullets/ding105.svgz \
+	images/bullets/ding106.svgz \
+	images/bullets/ding107.svgz \
+	images/bullets/ding108.svgz \
+	images/bullets/ding109.svgz \
+	images/bullets/ding110.svgz \
+	images/bullets/ding111.svgz \
+	images/bullets/ding112.svgz \
+	images/bullets/ding113.svgz \
+	images/bullets/ding114.svgz \
+	images/bullets/ding115.svgz \
+	images/bullets/ding116.svgz \
+	images/bullets/ding117.svgz \
+	images/bullets/ding118.svgz \
+	images/bullets/ding119.svgz \
+	images/bullets/ding120.svgz \
+	images/bullets/ding121.svgz \
+	images/bullets/ding122.svgz \
+	images/bullets/ding162.svgz \
+	images/bullets/ding163.svgz \
+	images/bullets/ding164.svgz \
+	images/bullets/ding165.svgz \
+	images/bullets/ding166.svgz \
+	images/bullets/ding167.svgz \
+	images/bullets/ding168.svgz \
+	images/bullets/ding169.svgz \
+	images/bullets/ding170.svgz \
+	images/bullets/ding171.svgz \
+	images/bullets/ding212.svgz \
+	images/bullets/ding213.svgz \
+	images/bullets/ding217.svgz \
+	images/bullets/ding219.svgz \
+	images/bullets/ding220.svgz \
+	images/bullets/ding221.svgz \
+	images/bullets/ding222.svgz \
+	images/bullets/ding223.svgz \
+	images/bullets/ding224.svgz \
+	images/bullets/ding225.svgz \
+	images/bullets/ding226.svgz \
+	images/bullets/ding227.svgz \
+	images/bullets/ding228.svgz \
+	images/bullets/ding229.svgz \
+	images/bullets/ding230.svgz \
+	images/bullets/ding231.svgz \
+	images/bullets/ding232.svgz \
+	images/bullets/ding233.svgz \
+	images/bullets/ding234.svgz \
+	images/bullets/ding235.svgz \
+	images/bullets/ding236.svgz \
+	images/bullets/ding237.svgz \
+	images/bullets/ding238.svgz \
+	images/bullets/ding239.svgz \
+	images/bullets/ding241.svgz \
+	images/bullets/ding242.svgz \
+	images/bullets/ding243.svgz \
+	images/bullets/ding245.svgz \
+	images/bullets/ding248.svgz \
+	images/bullets/ding250.svgz \
+	images/bullets/ding251.svgz \
+	images/bullets/ding252.svgz \
+	images/bullets/ding253.svgz \
+	images/bullets/ding254.svgz \
+	images/bullets/ding34.svgz \
+	images/bullets/ding36.svgz \
+	images/bullets/ding37.svgz \
+	images/bullets/ding38.svgz \
+	images/bullets/ding39.svgz \
+	images/bullets/ding40.svgz \
+	images/bullets/ding41.svgz \
+	images/bullets/ding42.svgz \
+	images/bullets/ding43.svgz \
+	images/bullets/ding44.svgz \
+	images/bullets/ding45.svgz \
+	images/bullets/ding47.svgz \
+	images/bullets/ding49.svgz \
+	images/bullets/ding50.svgz \
+	images/bullets/ding51.svgz \
+	images/bullets/ding52.svgz \
+	images/bullets/ding53.svgz \
+	images/bullets/ding54.svgz \
+	images/bullets/ding55.svgz \
+	images/bullets/ding56.svgz \
+	images/bullets/ding57.svgz \
+	images/bullets/ding58.svgz \
+	images/bullets/ding59.svgz \
+	images/bullets/ding60.svgz \
+	images/bullets/ding61.svgz \
+	images/bullets/ding62.svgz \
+	images/bullets/ding63.svgz \
+	images/bullets/ding64.svgz \
+	images/bullets/ding65.svgz \
+	images/bullets/ding66.svgz \
+	images/bullets/ding67.svgz \
+	images/bullets/ding68.svgz \
+	images/bullets/ding69.svgz \
+	images/bullets/ding70.svgz \
+	images/bullets/ding71.svgz \
+	images/bullets/ding72.svgz \
+	images/bullets/ding74.svgz \
+	images/bullets/ding75.svgz \
+	images/bullets/ding76.svgz \
+	images/bullets/ding77.svgz \
+	images/bullets/ding78.svgz \
+	images/bullets/ding79.svgz \
+	images/bullets/ding80.svgz \
+	images/bullets/ding81.svgz \
+	images/bullets/ding82.svgz \
+	images/bullets/ding83.svgz \
+	images/bullets/ding84.svgz \
+	images/bullets/ding85.svgz \
+	images/bullets/ding86.svgz \
+	images/bullets/ding87.svgz \
+	images/bullets/ding88.svgz \
+	images/bullets/ding89.svgz \
+	images/bullets/ding90.svgz \
+	images/bullets/ding91.svgz \
+	images/bullets/ding92.svgz \
+	images/bullets/ding93.svgz \
+	images/bullets/ding94.svgz \
+	images/bullets/ding95.svgz \
+	images/bullets/ding96.svgz \
+	images/bullets/ding97.svgz \
+	images/bullets/ding98.svgz \
+	images/bullets/ding99.svgz \
+	images/bullets/flat.svgz \
+	images/bullets/heartsuit.svgz \
+	images/bullets/leadsto.svgz \
+	images/bullets/lhd.svgz \
+	images/bullets/natural.svgz \
+	images/bullets/odot.svgz \
+	images/bullets/ominus.svgz \
+	images/bullets/oplus.svgz \
+	images/bullets/oslash.svgz \
+	images/bullets/otimes.svgz \
+	images/bullets/pisymbol_psy167.svgz \
+	images/bullets/pisymbol_psy168.svgz \
+	images/bullets/pisymbol_psy169.svgz \
+	images/bullets/pisymbol_psy170.svgz \
+	images/bullets/pisymbol_psy174.svgz \
+	images/bullets/pisymbol_psy183.svgz \
+	images/bullets/pisymbol_psy196.svgz \
+	images/bullets/pisymbol_psy197.svgz \
+	images/bullets/pisymbol_psy209.svgz \
+	images/bullets/pisymbol_psy215.svgz \
+	images/bullets/pisymbol_psy222.svgz \
+	images/bullets/pisymbol_psy224.svgz \
+	images/bullets/pisymbol_psy42.svgz \
+	images/bullets/pisymbol_psy45.svgz \
+	images/bullets/pisymbol_psy68.svgz \
+	images/bullets/rhd.svgz \
+	images/bullets/rightarrow2.svgz \
+	images/bullets/rightarrow.svgz \
+	images/bullets/rightharpoondown.svgz \
+	images/bullets/rightharpoonup.svgz \
+	images/bullets/sharp.svgz \
+	images/bullets/spadesuit.svgz \
+	images/bullets/star.svgz \
+	images/bullets/succ.svgz \
+	images/bullets/triangleleft.svgz \
+	images/bullets/triangleright.svgz \
+	images/bullets/vdash.svgz
+
+
 imagesipadir = $(imagesdir)/ipa
 dist_imagesipa_DATA = \
 	images/ipa/ipamacro-insert_deco_bottomtiebar.svgz \
@@ -1885,13 +2058,13 @@ dist_imagesoxygen_DATA1X = \
 	images/oxygen/dialog-show-new-inset_ref.svgz \
 	images/oxygen/dialog-show_character.svgz \
 	images/oxygen/dialog-show_findreplace.svgz \
+	images/oxygen/dialog-show_findreplaceadv.svgz \
 	images/oxygen/dialog-show_mathdelimiter.svgz \
 	images/oxygen/dialog-show_mathmatrix.svgz \
 	images/oxygen/dialog-show_print.svgz \
 	images/oxygen/dialog-show_spellchecker.svgz \
+	images/oxygen/dialog-show_toc.svgz \
 	images/oxygen/dialog-show_vclog.svgz \
-	images/oxygen/dialog-toggle_findreplaceadv.svgz \
-	images/oxygen/dialog-toggle_toc.svgz \
 	images/oxygen/dynamic-char-styles.svgz \
 	images/oxygen/dynamic-custom-insets.svgz \
 	images/oxygen/down.svgz \
@@ -2088,6 +2261,7 @@ dist_imagesclassic_DATA = \
 	images/classic/depth-decrement.png  \
 	images/classic/depth-increment.png  \
 	images/classic/dialog-preferences.png  \
+	images/classic/dialog-show_findreplaceadv.png  \
 	images/classic/dialog-show_mathdelimiter.png  \
 	images/classic/dialog-show_mathmatrix.png  \
 	images/classic/dialog-show-new-inset_citation.png  \
@@ -2098,9 +2272,8 @@ dist_imagesclassic_DATA = \
 	images/classic/dialog-show_findreplace.png  \
 	images/classic/dialog-show_print.png  \
 	images/classic/dialog-show_spellchecker.png  \
+	images/classic/dialog-show_toc.png  \
 	images/classic/dialog-show_vclog.png  \
-	images/classic/dialog-toggle_findreplaceadv.png  \
-	images/classic/dialog-toggle_toc.png  \
 	images/classic/down.png  \
 	images/classic/ert-insert.png  \
 	images/classic/file-open.png  \
@@ -2689,6 +2862,233 @@ dist_xtemplates_DATA = \
 	xtemplates/raster_image.xtemplate \
 	xtemplates/vector_graphics.xtemplate \
 	xtemplates/xfig.xtemplate
+
+#ePub related dependencies
+#1) conversion script itself
+dist_scripts_DATA += scripts/docbook2epub.py
+
+#2) xslt processor - Saxon 6.5.5
+dist_scripts_DATA += \
+	scripts/saxon6.LICENSE.txt \
+	scripts/saxon6.5.5.jar
+
+#3) xslt Stylesheets 1.79.2
+docbookdir = $(pkgdatadir)/docbook
+dist_docbook_DATA = \
+	docbook/COPYING \
+	docbook/source.txt \
+	docbook/VERSION \
+	docbook/VERSION.xsl
+
+docbookcommondir = $(pkgdatadir)/docbook/common
+dist_docbookcommon_DATA = \
+	docbook/common/addns.xsl \
+	docbook/common/af.xml \
+	docbook/common/am.xml \
+	docbook/common/ar.xml \
+	docbook/common/ast.xml \
+	docbook/common/as.xml \
+	docbook/common/autoidx-kimber.xsl \
+	docbook/common/autoidx-kosek.xsl \
+	docbook/common/az.xml \
+	docbook/common/bg.xml \
+	docbook/common/bn_in.xml \
+	docbook/common/bn.xml \
+	docbook/common/bs.xml \
+	docbook/common/build.xml \
+	docbook/common/ca.xml \
+	docbook/common/charmap.xml \
+	docbook/common/charmap.xsl \
+	docbook/common/common.xml \
+	docbook/common/common.xsl \
+	docbook/common/cs.xml \
+	docbook/common/cy.xml \
+	docbook/common/da.xml \
+	docbook/common/de.xml \
+	docbook/common/el.xml \
+	docbook/common/entities.ent \
+	docbook/common/en.xml \
+	docbook/common/eo.xml \
+	docbook/common/es.xml \
+	docbook/common/et.xml \
+	docbook/common/eu.xml \
+	docbook/common/fa.xml \
+	docbook/common/fi.xml \
+	docbook/common/fr.xml \
+	docbook/common/ga.xml \
+	docbook/common/gentext.xsl \
+	docbook/common/gl.xml \
+	docbook/common/gu.xml \
+	docbook/common/he.xml \
+	docbook/common/hi.xml \
+	docbook/common/hr.xml \
+	docbook/common/hu.xml \
+	docbook/common/id.xml \
+	docbook/common/insertfile.xsl \
+	docbook/common/is.xml \
+	docbook/common/it.xml \
+	docbook/common/ja.xml \
+	docbook/common/ka.xml \
+	docbook/common/kn.xml \
+	docbook/common/ko.xml \
+	docbook/common/ky.xml \
+	docbook/common/l10n.dtd \
+	docbook/common/l10n.xml \
+	docbook/common/l10n.xsl \
+	docbook/common/labels.xsl \
+	docbook/common/la.xml \
+	docbook/common/lt.xml \
+	docbook/common/lv.xml \
+	docbook/common/ml.xml \
+	docbook/common/mn.xml \
+	docbook/common/mr.xml \
+	docbook/common/nb.xml \
+	docbook/common/nds.xml \
+	docbook/common/nl.xml \
+	docbook/common/nn.xml \
+	docbook/common/olink.xsl \
+	docbook/common/or.xml \
+	docbook/common/pa.xml \
+	docbook/common/pi.xml \
+	docbook/common/pi.xsl \
+	docbook/common/pl.xml \
+	docbook/common/pt_br.xml \
+	docbook/common/pt.xml \
+	docbook/common/refentry.xml \
+	docbook/common/refentry.xsl \
+	docbook/common/ro.xml \
+	docbook/common/ru.xml \
+	docbook/common/sk.xml \
+	docbook/common/sl.xml \
+	docbook/common/sq.xml \
+	docbook/common/sr_Latn.xml \
+	docbook/common/sr.xml \
+	docbook/common/stripns.xsl \
+	docbook/common/subtitles.xsl \
+	docbook/common/sv.xml \
+	docbook/common/table.xsl \
+	docbook/common/targetdatabase.dtd \
+	docbook/common/targets.xsl \
+	docbook/common/ta.xml \
+	docbook/common/te.xml \
+	docbook/common/th.xml \
+	docbook/common/titles.xsl \
+	docbook/common/tl.xml \
+	docbook/common/tr.xml \
+	docbook/common/uk.xml \
+	docbook/common/ur.xml \
+	docbook/common/utility.xml \
+	docbook/common/utility.xsl \
+	docbook/common/vi.xml \
+	docbook/common/xh.xml \
+	docbook/common/zh_cn.xml \
+	docbook/common/zh_tw.xml \
+	docbook/common/zh.xml
+
+docbookepub3dir = $(pkgdatadir)/docbook/epub3
+dist_docbookepub3_DATA = \
+	docbook/epub3/build.xml \
+	docbook/epub3/chunkfast.xsl \
+	docbook/epub3/chunk.xsl \
+	docbook/epub3/docbook-epub.css.xml \
+	docbook/epub3/docbook.xsl \
+	docbook/epub3/epub3-chunk-mods.xsl \
+	docbook/epub3/epub3-element-mods.xsl \
+	docbook/epub3/profile-chunk.xsl \
+	docbook/epub3/profile-docbook.xsl \
+	docbook/epub3/README \
+	docbook/epub3/titlepage.templates.xml \
+	docbook/epub3/titlepage.templates.xsl
+
+docbooklibdir = $(pkgdatadir)/docbook/lib
+dist_docbooklib_DATA = \
+	docbook/lib/build.xml \
+	docbook/lib/lib.xsl
+
+docbookxhtml5dir = $(pkgdatadir)/docbook/xhtml5
+dist_docbookxhtml5_DATA = \
+	docbook/xhtml5/build.xml \
+	docbook/xhtml5/chunkfast.xsl \
+	docbook/xhtml5/chunk.xsl \
+	docbook/xhtml5/docbook.css.xml \
+	docbook/xhtml5/docbook.xsl \
+	docbook/xhtml5/html5-chunk-mods.xsl \
+	docbook/xhtml5/html5-element-mods.xsl \
+	docbook/xhtml5/onechunk.xsl \
+	docbook/xhtml5/profile-chunk.xsl \
+	docbook/xhtml5/profile-docbook.xsl \
+	docbook/xhtml5/README \
+	docbook/xhtml5/xhtml2xhtml5.xsl \
+	docbook/xhtml5/xhtml-docbook.xsl \
+	docbook/xhtml5/xhtml-profile-docbook.xsl
+
+docbookxhtmldir = $(pkgdatadir)/docbook/xhtml
+dist_docbookxhtml_DATA = \
+	docbook/xhtml/admon.xsl \
+	docbook/xhtml/annotations.xsl \
+	docbook/xhtml/autoidx-kimber.xsl \
+	docbook/xhtml/autoidx-kosek.xsl \
+	docbook/xhtml/autoidx-ng.xsl \
+	docbook/xhtml/autoidx.xsl \
+	docbook/xhtml/autotoc.xsl \
+	docbook/xhtml/biblio-iso690.xsl \
+	docbook/xhtml/biblio.xsl \
+	docbook/xhtml/block.xsl \
+	docbook/xhtml/build.xml \
+	docbook/xhtml/callout.xsl \
+	docbook/xhtml/changebars.xsl \
+	docbook/xhtml/chunk-changebars.xsl \
+	docbook/xhtml/chunk-code.xsl \
+	docbook/xhtml/chunk-common.xsl \
+	docbook/xhtml/chunker.xsl \
+	docbook/xhtml/chunkfast.xsl \
+	docbook/xhtml/chunktoc.xsl \
+	docbook/xhtml/chunk.xsl \
+	docbook/xhtml/component.xsl \
+	docbook/xhtml/division.xsl \
+	docbook/xhtml/docbook.css.xml \
+	docbook/xhtml/docbook-no-doctype.xsl \
+	docbook/xhtml/docbook.xsl \
+	docbook/xhtml/ebnf.xsl \
+	docbook/xhtml/footnote.xsl \
+	docbook/xhtml/formal.xsl \
+	docbook/xhtml/glossary.xsl \
+	docbook/xhtml/graphics.xsl \
+	docbook/xhtml/highlight.xsl \
+	docbook/xhtml/html-rtf.xsl \
+	docbook/xhtml/htmltbl.xsl \
+	docbook/xhtml/html.xsl \
+	docbook/xhtml/index.xsl \
+	docbook/xhtml/info.xsl \
+	docbook/xhtml/inline.xsl \
+	docbook/xhtml/its.xsl \
+	docbook/xhtml/keywords.xsl \
+	docbook/xhtml/lists.xsl \
+	docbook/xhtml/maketoc.xsl \
+	docbook/xhtml/manifest.xsl \
+	docbook/xhtml/math.xsl \
+	docbook/xhtml/oldchunker.xsl \
+	docbook/xhtml/onechunk.xsl \
+	docbook/xhtml/param.xsl \
+	docbook/xhtml/pi.xsl \
+	docbook/xhtml/profile-chunk-code.xsl \
+	docbook/xhtml/profile-chunk.xsl \
+	docbook/xhtml/profile-docbook.xsl \
+	docbook/xhtml/profile-onechunk.xsl \
+	docbook/xhtml/publishers.xsl \
+	docbook/xhtml/qandaset.xsl \
+	docbook/xhtml/refentry.xsl \
+	docbook/xhtml/sections.xsl \
+	docbook/xhtml/synop.xsl \
+	docbook/xhtml/table.xsl \
+	docbook/xhtml/task.xsl \
+	docbook/xhtml/titlepage.templates.xml \
+	docbook/xhtml/titlepage.templates.xsl \
+	docbook/xhtml/titlepage.xsl \
+	docbook/xhtml/toc.xsl \
+	docbook/xhtml/verbatim.xsl \
+	docbook/xhtml/xref.xsl
+
 
 if INSTALL_POSIX
 # install application icons. The 'hicolor' theme is the default theme

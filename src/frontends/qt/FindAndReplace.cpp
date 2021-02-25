@@ -102,17 +102,13 @@ bool FindAndReplaceWidget::eventFilter(QObject * obj, QEvent * event)
 
 	case Qt::Key_Enter:
 	case Qt::Key_Return: {
-		// with shift we (temporarily) change search/replace direction
-		bool const searchback = searchbackCB->isChecked();
-		if (e->modifiers() == Qt::ShiftModifier && !searchback)
-			searchbackCB->setChecked(true);
-
-		if (obj == find_work_area_)
-			on_findNextPB_clicked();
+		bool const searchback = (e->modifiers() == Qt::ShiftModifier);
+		bool const replace = (obj == replace_work_area_);
+		findAndReplace(searchback, replace);
+		if (replace)
+			replace_work_area_->setFocus();
 		else
-			on_replacePB_clicked();
-		// back to how it was
-		searchbackCB->setChecked(searchback);
+			find_work_area_->setFocus();
 		return true;
 	}
 
@@ -530,6 +526,12 @@ void FindAndReplaceWidget::on_replaceallPB_clicked()
 }
 
 
+void FindAndReplaceWidget::on_searchbackCB_clicked()
+{
+	updateButtons();
+}
+
+
 // Copy selected elements from bv's BufferParams to the dest_bv's
 static void copy_params(BufferView const & bv, BufferView & dest_bv) {
 	Buffer const & doc_buf = bv.buffer();
@@ -577,6 +579,7 @@ bool FindAndReplaceWidget::initialiseParams(std::string const & /*params*/)
 void FindAndReplace::updateView()
 {
 	widget_->updateGUI();
+	widget_->updateButtons();
 }
 
 
@@ -630,6 +633,22 @@ void FindAndReplaceWidget::updateGUI()
 	replace_work_area_->setEnabled(replace_enabled);
 	replacePB->setEnabled(replace_enabled);
 	replaceallPB->setEnabled(replace_enabled);
+}
+
+
+void FindAndReplaceWidget::updateButtons()
+{
+	if (searchbackCB->isChecked()) {
+		findNextPB->setText(qt_("&< Find"));
+		findNextPB->setToolTip(qt_("Find previous occurrence (Shift+Enter, forwards: Enter)"));
+		replacePB->setText(qt_("< Rep&lace"));
+		replacePB->setToolTip(qt_("Replace and find previous occurrence (Shift+Enter, forwards: Enter)"));
+	} else {
+		findNextPB->setText(qt_("Find &>"));
+		findNextPB->setToolTip(qt_("Find next occurrence (Enter, backwards: Shift+Enter)"));
+		replacePB->setText(qt_("Rep&lace >"));
+		replacePB->setToolTip(qt_("Replace and find next occurrence (Enter, backwards: Shift+Enter)"));
+	}
 }
 
 

@@ -31,6 +31,7 @@
 #include "Paragraph.h"
 #include "Text.h"
 #include "Encoding.h"
+#include "Language.h"
 
 #include "frontends/Application.h"
 #include "frontends/alert.h"
@@ -49,7 +50,7 @@
 #include "support/lstrings.h"
 #include "support/textutils.h"
 
-#include <map>
+#include <unordered_map>
 #include <regex>
 
 //#define ResultsDebug
@@ -71,6 +72,9 @@ using namespace lyx::support;
 
 namespace lyx {
 
+typedef unordered_map<string, string> AccentsMap;
+typedef unordered_map<string,string>::const_iterator AccentsIterator;
+static AccentsMap accents = unordered_map<string, string>();
 
 // Helper class for deciding what should be ignored
 class IgnoreFormats {
@@ -98,7 +102,11 @@ class IgnoreFormats {
 	///
 	bool getLanguage() const { return ignoreLanguage_; }
 	///
-	void setIgnoreFormat(string const & type, bool value);
+	bool getDeleted() const { return ignoreDeleted_; }
+	///
+	void setIgnoreDeleted(bool value);
+	///
+	void setIgnoreFormat(string const & type, bool value, bool fromUser = true);
 
 private:
 	///
@@ -121,16 +129,23 @@ private:
 	bool ignoreColor_ = false;
 	///
 	bool ignoreLanguage_ = false;
+	bool userSelectedIgnoreLanguage_ = false;
+	///
+	bool ignoreDeleted_ = true;
 };
 
-
-void IgnoreFormats::setIgnoreFormat(string const & type, bool value)
+void IgnoreFormats::setIgnoreFormat(string const & type, bool value, bool fromUser)
 {
 	if (type == "color") {
 		ignoreColor_ = value;
 	}
 	else if (type == "language") {
-		ignoreLanguage_ = value;
+		if (fromUser) {
+			userSelectedIgnoreLanguage_ = value;
+			ignoreLanguage_ = value;
+		}
+		else
+			ignoreLanguage_ = (value || userSelectedIgnoreLanguage_);
 	}
 	else if (type == "sectioning") {
 		ignoreSectioning_ = value;
@@ -159,24 +174,27 @@ void IgnoreFormats::setIgnoreFormat(string const & type, bool value)
 	else if (type == "strike") {
 		ignoreStrikeOut_ = value;
 	}
+	else if (type == "deleted") {
+		ignoreDeleted_ = value;
+	}
 }
 
 // The global variable that can be changed from outside
 IgnoreFormats ignoreFormats;
 
 
-void setIgnoreFormat(string const & type, bool value)
+void setIgnoreFormat(string const & type, bool value, bool fromUser)
 {
-  ignoreFormats.setIgnoreFormat(type, value);
+  ignoreFormats.setIgnoreFormat(type, value, fromUser);
 }
 
 
 namespace {
 
-bool parse_bool(docstring & howto)
+bool parse_bool(docstring & howto, bool const defvalue = false)
 {
 	if (howto.empty())
-		return false;
+		return defvalue;
 	docstring var;
 	howto = split(howto, var, ' ');
 	return var == "1";
@@ -207,24 +225,33 @@ private:
 };
 
 
-int findForward(DocIterator & cur, MatchString const & match,
-		bool find_del = true)
+int findForward(DocIterator & cur, DocIterator const endcur,
+		MatchString const & match,
+		bool find_del = true, bool onlysel = false)
 {
-	for (; cur; cur.forwardChar())
+	for (; cur; cur.forwardChar()) {
+		if (onlysel && endcur.pit() == cur.pit()
+		    && endcur.idx() == cur.idx() && endcur.pos() < cur.pos())
+			break;
 		if (cur.inTexted()) {
 			int len = match(cur.paragraph(), cur.pos(), find_del);
 			if (len > 0)
 				return len;
 		}
+	}
 	return 0;
 }
 
 
-int findBackwards(DocIterator & cur, MatchString const & match,
-		  bool find_del = true)
+int findBackwards(DocIterator & cur, DocIterator const endcur,
+		  MatchString const & match,
+		  bool find_del = true, bool onlysel = false)
 {
 	while (cur) {
 		cur.backwardChar();
+		if (onlysel && endcur.pit() == cur.pit()
+		    && endcur.idx() == cur.idx() && endcur.pos() > cur.pos())
+			break;
 		if (cur.inTexted()) {
 			int len = match(cur.paragraph(), cur.pos(), find_del);
 			if (len > 0)
@@ -244,38 +271,86 @@ bool searchAllowed(docstring const & str)
 	return true;
 }
 
+} // namespace
+
 
 bool findOne(BufferView * bv, docstring const & searchstr,
 	     bool case_sens, bool whole, bool forward,
-	     bool find_del = true, bool check_wrap = false)
+	     bool find_del, bool check_wrap, bool auto_wrap,
+	     bool instant, bool onlysel)
 {
+	// Clean up previous selections with empty searchstr on instant
+	if (searchstr.empty() && instant) {
+		if (bv->cursor().selection()) {
+			bv->setCursor(bv->cursor().selectionBegin());
+			bv->clearSelection();
+		}
+		return true;
+	}
+
 	if (!searchAllowed(searchstr))
 		return false;
 
+	DocIterator const endcur = forward ? bv->cursor().selectionEnd() : bv->cursor().selectionBegin();
+
+	if (onlysel && bv->cursor().selection()) {
+		docstring const matchstring = bv->cursor().selectionAsString(false);
+		docstring const lcmatchsting = support::lowercase(matchstring);
+		if (matchstring == searchstr || (!case_sens && lcmatchsting == lowercase(searchstr))) {
+			docstring q = _("The search string matches the selection, and search is limited to selection.\n"
+					"Continue search outside?");
+			int search_answer = frontend::Alert::prompt(_("Search outside selection?"),
+				q, 0, 1, _("&Yes"), _("&No"));
+			if (search_answer == 0) {
+				bv->clearSelection();
+				if (findOne(bv, searchstr, case_sens, whole, forward,
+					    find_del, check_wrap, auto_wrap, false, false))
+					return true;
+			}
+			return false;
+		}
+	}
+
 	DocIterator cur = forward
-		? bv->cursor().selectionEnd()
-		: bv->cursor().selectionBegin();
+		? ((instant || onlysel) ? bv->cursor().selectionBegin() : bv->cursor().selectionEnd())
+		: ((instant || onlysel) ? bv->cursor().selectionEnd() : bv->cursor().selectionBegin());
 
 	MatchString const match(searchstr, case_sens, whole);
 
 	int match_len = forward
-		? findForward(cur, match, find_del)
-		: findBackwards(cur, match, find_del);
+		? findForward(cur, endcur, match, find_del, onlysel)
+		: findBackwards(cur, endcur, match, find_del, onlysel);
 
 	if (match_len > 0)
 		bv->putSelectionAt(cur, match_len, !forward);
+	else if (onlysel) {
+		docstring q = _("The search string was not found within the selection.\n"
+				"Continue search outside?");
+		int search_answer = frontend::Alert::prompt(_("Search outside selection?"),
+			q, 0, 1, _("&Yes"), _("&No"));
+		if (search_answer == 0) {
+			bv->clearSelection();
+			if (findOne(bv, searchstr, case_sens, whole, forward,
+				    find_del, check_wrap, auto_wrap, false, false))
+				return true;
+		}
+		return false;
+	}
 	else if (check_wrap) {
 		DocIterator cur_orig(bv->cursor());
-		docstring q;
-		if (forward)
-			q = _("End of file reached while searching forward.\n"
-			  "Continue searching from the beginning?");
-		else
-			q = _("Beginning of file reached while searching backward.\n"
-			  "Continue searching from the end?");
-		int wrap_answer = frontend::Alert::prompt(_("Wrap search?"),
-			q, 0, 1, _("&Yes"), _("&No"));
-		if (wrap_answer == 0) {
+		if (!auto_wrap) {
+			docstring q;
+			if (forward)
+				q = _("End of file reached while searching forward.\n"
+				  "Continue searching from the beginning?");
+			else
+				q = _("Beginning of file reached while searching backward.\n"
+				  "Continue searching from the end?");
+			int wrap_answer = frontend::Alert::prompt(_("Wrap search?"),
+				q, 0, 1, _("&Yes"), _("&No"));
+			auto_wrap = wrap_answer == 0;
+		}
+		if (auto_wrap) {
 			if (forward) {
 				bv->cursor().clear();
 				bv->cursor().push_back(CursorSlice(bv->buffer().inset()));
@@ -284,7 +359,8 @@ bool findOne(BufferView * bv, docstring const & searchstr,
 				bv->cursor().backwardPos();
 			}
 			bv->clearSelection();
-			if (findOne(bv, searchstr, case_sens, whole, forward, find_del, false))
+			if (findOne(bv, searchstr, case_sens, whole, forward,
+				    find_del, false, false, false, false))
 				return true;
 		}
 		bv->cursor().setCursor(cur_orig);
@@ -295,16 +371,20 @@ bool findOne(BufferView * bv, docstring const & searchstr,
 }
 
 
+namespace {
+
 int replaceAll(BufferView * bv,
 	       docstring const & searchstr, docstring const & replacestr,
-	       bool case_sens, bool whole)
+	       bool case_sens, bool whole, bool onlysel)
 {
 	Buffer & buf = bv->buffer();
 
 	if (!searchAllowed(searchstr) || buf.isReadonly())
 		return 0;
 
-	DocIterator cur_orig(bv->cursor());
+	DocIterator startcur = bv->cursor().selectionBegin();
+	DocIterator endcur = bv->cursor().selectionEnd();
+	bool const had_selection = bv->cursor().selection();
 
 	MatchString const match(searchstr, case_sens, whole);
 	int num = 0;
@@ -314,29 +394,53 @@ int replaceAll(BufferView * bv,
 
 	Cursor cur(*bv);
 	cur.setCursor(doc_iterator_begin(&buf));
-	int match_len = findForward(cur, match, false);
+	int match_len = findForward(cur, endcur, match, false, onlysel);
 	while (match_len > 0) {
 		// Backup current cursor position and font.
 		pos_type const pos = cur.pos();
 		Font const font = cur.paragraph().getFontSettings(buf.params(), pos);
 		cur.recordUndo();
-		int striked = ssize -
+		int ct_deleted_text = ssize -
 			cur.paragraph().eraseChars(pos, pos + match_len,
 						   buf.params().track_changes);
 		cur.paragraph().insert(pos, replacestr, font,
 				       Change(buf.params().track_changes
 					      ? Change::INSERTED
 					      : Change::UNCHANGED));
-		for (int i = 0; i < rsize + striked; ++i)
-			cur.forwardChar();
+		for (int i = 0; i < rsize + ct_deleted_text
+		     && cur.pos() < cur.lastpos(); ++i)
+			cur.forwardPos();
+		if (onlysel && cur.pit() == endcur.pit() && cur.idx() == endcur.idx()) {
+			// Adjust end of selection for replace-all in selection
+			if (rsize > ssize) {
+				int const offset = rsize - ssize;
+				for (int i = 0; i < offset + ct_deleted_text
+				     && endcur.pos() < endcur.lastpos(); ++i)
+					endcur.forwardPos();
+			} else {
+				int const offset = ssize - rsize;
+				for (int i = 0; i < offset && endcur.pos() > 0; ++i)
+					endcur.backwardPos();
+				for (int i = 0; i < ct_deleted_text
+				     && endcur.pos() < endcur.lastpos(); ++i)
+					endcur.forwardPos();
+			}
+		}
 		++num;
-		match_len = findForward(cur, match, false);
+		match_len = findForward(cur, endcur, match, false, onlysel);
 	}
 
 	bv->putSelectionAt(doc_iterator_begin(&buf), 0, false);
 
-	cur_orig.fixIfBroken();
-	bv->setCursor(cur_orig);
+	startcur.fixIfBroken();
+	bv->setCursor(startcur);
+
+	// Reset selection, accounting for changes in selection
+	if (had_selection) {
+		endcur.fixIfBroken();
+		bv->cursor().resetAnchor();
+		bv->setCursorSelectionTo(endcur);
+	}
 
 	return num;
 }
@@ -359,13 +463,15 @@ int replaceAll(BufferView * bv,
 // whether anything at all was done.
 pair<bool, int> replaceOne(BufferView * bv, docstring searchstr,
 			   docstring const & replacestr, bool case_sens,
-			   bool whole, bool forward, bool findnext)
+			   bool whole, bool forward, bool findnext, bool wrap,
+			   bool onlysel)
 {
 	Cursor & cur = bv->cursor();
-	if (!cur.selection()) {
+	if (!cur.selection() || onlysel) {
 		// no selection, non-empty search string: find it
 		if (!searchstr.empty()) {
-			bool const found = findOne(bv, searchstr, case_sens, whole, forward, true, findnext);
+			bool const found = findOne(bv, searchstr, case_sens, whole,
+						   forward, true, findnext, wrap, false, onlysel);
 			return make_pair(found, 0);
 		}
 		// empty search string
@@ -394,7 +500,8 @@ pair<bool, int> replaceOne(BufferView * bv, docstring searchstr,
 	// no selection or current selection is not search word:
 	// just find the search word
 	if (!have_selection || !match) {
-		bool const found = findOne(bv, searchstr, case_sens, whole, forward, true, findnext);
+		bool const found = findOne(bv, searchstr, case_sens, whole, forward,
+					   true, findnext, wrap, false, onlysel);
 		return make_pair(found, 0);
 	}
 
@@ -410,7 +517,8 @@ pair<bool, int> replaceOne(BufferView * bv, docstring searchstr,
 		        cur.pos() = cur.lastpos());
 	}
 	if (findnext)
-		findOne(bv, searchstr, case_sens, whole, forward, false, findnext);
+		findOne(bv, searchstr, case_sens, whole,
+			forward, false, findnext, wrap, false, onlysel);
 
 	return make_pair(true, 1);
 }
@@ -419,13 +527,18 @@ pair<bool, int> replaceOne(BufferView * bv, docstring searchstr,
 
 
 docstring const find2string(docstring const & search,
-			    bool casesensitive, bool matchword, bool forward)
+			    bool casesensitive, bool matchword,
+			    bool forward, bool wrap, bool instant,
+			    bool onlysel)
 {
 	odocstringstream ss;
 	ss << search << '\n'
 	   << int(casesensitive) << ' '
 	   << int(matchword) << ' '
-	   << int(forward);
+	   << int(forward) << ' '
+	   << int(wrap) << ' '
+	   << int(instant) << ' '
+	   << int(onlysel);
 	return ss.str();
 }
 
@@ -433,7 +546,8 @@ docstring const find2string(docstring const & search,
 docstring const replace2string(docstring const & replace,
 			       docstring const & search,
 			       bool casesensitive, bool matchword,
-			       bool all, bool forward, bool findnext)
+			       bool all, bool forward, bool findnext,
+			       bool wrap, bool onlysel)
 {
 	odocstringstream ss;
 	ss << replace << '\n'
@@ -442,8 +556,35 @@ docstring const replace2string(docstring const & replace,
 	   << int(matchword) << ' '
 	   << int(all) << ' '
 	   << int(forward) << ' '
-	   << int(findnext);
+	   << int(findnext) << ' '
+	   << int(wrap) << ' '
+	   << int(onlysel);
 	return ss.str();
+}
+
+
+docstring const string2find(docstring const & argument,
+			      bool &casesensitive,
+			      bool &matchword,
+			      bool &forward,
+			      bool &wrap,
+			      bool &instant,
+			      bool &onlysel)
+{
+	// data is of the form
+	// "<search>
+	//  <casesensitive> <matchword> <forward> <wrap> <onlysel>"
+	docstring search;
+	docstring howto = split(argument, search, '\n');
+
+	casesensitive = parse_bool(howto);
+	matchword     = parse_bool(howto);
+	forward       = parse_bool(howto, true);
+	wrap          = parse_bool(howto);
+	instant       = parse_bool(howto);
+	onlysel       = parse_bool(howto);
+
+	return search;
 }
 
 
@@ -453,18 +594,18 @@ bool lyxfind(BufferView * bv, FuncRequest const & ev)
 		return false;
 
 	//lyxerr << "find called, cmd: " << ev << endl;
+	bool casesensitive;
+	bool matchword;
+	bool forward;
+	bool wrap;
+	bool instant;
+	bool onlysel;
+	
+	docstring search = string2find(ev.argument(), casesensitive,
+				       matchword, forward, wrap, instant, onlysel);
 
-	// data is of the form
-	// "<search>
-	//  <casesensitive> <matchword> <forward>"
-	docstring search;
-	docstring howto = split(ev.argument(), search, '\n');
-
-	bool casesensitive = parse_bool(howto);
-	bool matchword     = parse_bool(howto);
-	bool forward       = parse_bool(howto);
-
-	return findOne(bv, search, casesensitive, matchword, forward, false, true);
+	return findOne(bv, search, casesensitive, matchword, forward,
+		       false, true, wrap, instant, onlysel);
 }
 
 
@@ -476,7 +617,7 @@ bool lyxreplace(BufferView * bv, FuncRequest const & ev)
 	// data is of the form
 	// "<search>
 	//  <replace>
-	//  <casesensitive> <matchword> <all> <forward> <findnext>"
+	//  <casesensitive> <matchword> <all> <forward> <findnext> <wrap> <onlysel>"
 	docstring search;
 	docstring rplc;
 	docstring howto = split(ev.argument(), rplc, '\n');
@@ -485,18 +626,26 @@ bool lyxreplace(BufferView * bv, FuncRequest const & ev)
 	bool casesensitive = parse_bool(howto);
 	bool matchword     = parse_bool(howto);
 	bool all           = parse_bool(howto);
-	bool forward       = parse_bool(howto);
-	bool findnext      = howto.empty() ? true : parse_bool(howto);
+	bool forward       = parse_bool(howto, true);
+	bool findnext      = parse_bool(howto, true);
+	bool wrap          = parse_bool(howto);
+	bool onlysel       = parse_bool(howto);
+
+	if (!bv->cursor().selection())
+		// only selection only makes sense with selection
+		onlysel = false;
 
 	bool update = false;
 
 	int replace_count = 0;
 	if (all) {
-		replace_count = replaceAll(bv, search, rplc, casesensitive, matchword);
+		replace_count = replaceAll(bv, search, rplc, casesensitive,
+					   matchword, onlysel);
 		update = replace_count > 0;
 	} else {
 		pair<bool, int> rv =
-			replaceOne(bv, search, rplc, casesensitive, matchword, forward, findnext);
+			replaceOne(bv, search, rplc, casesensitive, matchword,
+				   forward, findnext, wrap, onlysel);
 		update = rv.first;
 		replace_count = rv.second;
 	}
@@ -504,15 +653,19 @@ bool lyxreplace(BufferView * bv, FuncRequest const & ev)
 	Buffer const & buf = bv->buffer();
 	if (!update) {
 		// emit message signal.
-		buf.message(_("String not found."));
+		if (onlysel)
+			buf.message(_("String not found in selection."));
+		else
+			buf.message(_("String not found."));
 	} else {
 		if (replace_count == 0) {
 			buf.message(_("String found."));
 		} else if (replace_count == 1) {
 			buf.message(_("String has been replaced."));
 		} else {
-			docstring const str =
-				bformat(_("%1$d strings have been replaced."), replace_count);
+			docstring const str = onlysel
+					? bformat(_("%1$d strings have been replaced in the selection."), replace_count)
+					: bformat(_("%1$d strings have been replaced."), replace_count);
 			buf.message(str);
 		}
 	}
@@ -638,101 +791,6 @@ namespace {
 
 typedef vector<pair<string, string> > Escapes;
 
-/// A map of symbols and their escaped equivalent needed within a regex.
-/// @note Beware of order
-/*
-Escapes const & get_regexp_escapes()
-{
-	typedef std::pair<std::string, std::string> P;
-
-	static Escapes escape_map;
-	if (escape_map.empty()) {
-		escape_map.push_back(P("$", "_x_$"));
-		escape_map.push_back(P("{", "_x_{"));
-		escape_map.push_back(P("}", "_x_}"));
-		escape_map.push_back(P("[", "_x_["));
-		escape_map.push_back(P("]", "_x_]"));
-		escape_map.push_back(P("(", "_x_("));
-		escape_map.push_back(P(")", "_x_)"));
-		escape_map.push_back(P("+", "_x_+"));
-		escape_map.push_back(P("*", "_x_*"));
-		escape_map.push_back(P(".", "_x_."));
-		escape_map.push_back(P("\\", "(?:\\\\|\\\\backslash)"));
-		escape_map.push_back(P("~", "(?:\\\\textasciitilde|\\\\sim)"));
-		escape_map.push_back(P("^", "(?:\\^|\\\\textasciicircum\\{\\}|\\\\textasciicircum|\\\\mathcircumflex)"));
-		escape_map.push_back(P("_x_", "\\"));
-	}
-	return escape_map;
-}
-*/
-
-/// A map of lyx escaped strings and their unescaped equivalent.
-/*
-Escapes const & get_lyx_unescapes()
-{
-	typedef std::pair<std::string, std::string> P;
-
-	static Escapes escape_map;
-	if (escape_map.empty()) {
-		escape_map.push_back(P("\\%", "%"));
-		escape_map.push_back(P("\\{", "{"));
-		escape_map.push_back(P("\\}", "}"));
-		escape_map.push_back(P("\\mathcircumflex ", "^"));
-		escape_map.push_back(P("\\mathcircumflex", "^"));
-		escape_map.push_back(P("\\backslash ", "\\"));
-		escape_map.push_back(P("\\backslash", "\\"));
-		escape_map.push_back(P("\\sim ", "~"));
-		escape_map.push_back(P("\\sim", "~"));
-	}
-	return escape_map;
-}
-*/
-
-/// A map of escapes turning a regexp matching text to one matching latex.
-/*
-Escapes const & get_regexp_latex_escapes()
-{
-	typedef std::pair<std::string, std::string> P;
-
-	static Escapes escape_map;
-	if (escape_map.empty()) {
-		escape_map.push_back(P("\\\\", "(?:\\\\\\\\|\\\\backslash|\\\\textbackslash\\{\\}|\\\\textbackslash)"));
-		escape_map.push_back(P("(<?!\\\\\\\\textbackslash)\\{", "\\\\\\{"));
-		escape_map.push_back(P("(<?!\\\\\\\\textbackslash\\\\\\{)\\}", "\\\\\\}"));
-		escape_map.push_back(P("\\[", "\\{\\[\\}"));
-		escape_map.push_back(P("\\]", "\\{\\]\\}"));
-		escape_map.push_back(P("\\^", "(?:\\^|\\\\textasciicircum\\{\\}|\\\\textasciicircum|\\\\mathcircumflex)"));
-		escape_map.push_back(P("%", "\\\\\\%"));
-		escape_map.push_back(P("#", "\\\\#"));
-	}
-	return escape_map;
-}
-*/
-
-/** @todo Probably the maps need to be migrated to regexps, in order to distinguish if
- ** the found occurrence were escaped.
- **/
-/*
-string apply_escapes(string s, Escapes const & escape_map)
-{
-	LYXERR(Debug::FIND, "Escaping: '" << s << "'");
-	Escapes::const_iterator it;
-	for (it = escape_map.begin(); it != escape_map.end(); ++it) {
-//		LYXERR(Debug::FIND, "Escaping " << it->first << " as " << it->second);
-		unsigned int pos = 0;
-		while (pos < s.length() && (pos = s.find(it->first, pos)) < s.length()) {
-			s.replace(pos, it->first.length(), it->second);
-			LYXERR(Debug::FIND, "After escape: " << s);
-			pos += it->second.length();
-//			LYXERR(Debug::FIND, "pos: " << pos);
-		}
-	}
-	LYXERR(Debug::FIND, "Escaped : '" << s << "'");
-	return s;
-}
-*/
-
-
 string string2regex(string in)
 {
 	static std::regex specialChars { R"([-[\]{}()*+?.,\^$|#\s\$\\])" };
@@ -758,7 +816,7 @@ string string2regex(string in)
 	return temp2;
 }
 
-string correctRegex(string t)
+string correctRegex(string t, bool withformat)
 {
 	/* Convert \backslash => \
 	 * and \{, \}, \[, \] => {, }, [, ]
@@ -767,6 +825,7 @@ string correctRegex(string t)
 	regex wordre("(\\\\)*(\\\\((backslash|mathcircumflex) ?|[\\[\\]\\{\\}]))");
 	size_t lastpos = 0;
 	smatch sub;
+	bool backslashed = false;
 	for (sregex_iterator it(t.begin(), t.end(), wordre), end; it != end; ++it) {
 		sub = *it;
 		string replace;
@@ -774,14 +833,31 @@ string correctRegex(string t)
 			continue;
 		}
 		else {
-			if (sub.str(4) == "backslash")
+			if (sub.str(4) == "backslash") {
 				replace = "\\";
+				if (withformat) {
+					// transforms '\backslash \{' into '\{'
+					// and '\{' into '{'
+					string next = t.substr(sub.position(2) + sub.str(2).length(), 2);
+					if ((next == "\\{") || (next == "\\}")) {
+						replace = "";
+						backslashed = true;
+					}
+				}
+			}
 			else if (sub.str(4) == "mathcircumflex")
 				replace = "^";
-			else if (sub.str(3) == "{")
-				replace = "\\braceleft";
-			else if (sub.str(3) == "}")
-				replace = "\\braceright";
+			else if (backslashed) {
+				backslashed = false;
+				if (withformat && (sub.str(3) == "{"))
+					replace = accents["braceleft"];
+				else if (withformat && (sub.str(3) == "}"))
+					replace = accents["braceright"];
+				else {
+					// else part should not exist
+					LASSERT(1, /**/);
+				}
+			}
 			else
 				replace = sub.str(3);
 		}
@@ -800,7 +876,7 @@ string correctRegex(string t)
 /// Within \regexp{} apply get_lyx_unescapes() only (i.e., preserve regexp semantics of the string),
 /// while outside apply get_lyx_unescapes()+get_regexp_escapes().
 /// If match_latex is true, then apply regexp_latex_escapes() to \regexp{} contents as well.
-string escape_for_regex(string s)
+string escape_for_regex(string s, bool withformat)
 {
 	size_t lastpos = 0;
 	string result = "";
@@ -816,7 +892,7 @@ string escape_for_regex(string s)
 				break;
 		}
 		size_t end_pos = s.find("\\endregexp{}}", regex_pos + 8);
-		result += correctRegex(s.substr(regex_pos + 8, end_pos -(regex_pos + 8)));
+		result += correctRegex(s.substr(regex_pos + 8, end_pos -(regex_pos + 8)), withformat);
 		lastpos = end_pos + 13;
 	}
 	return result;
@@ -836,62 +912,6 @@ bool regex_replace(string const & s, string & t, string const & searchstr,
 	t = oss.str();
 	return rv;
 }
-
-#if 0
-/** Checks if supplied string segment is well-formed from the standpoint of matching open-closed braces.
- **
- ** Verify that closed braces exactly match open braces. This avoids that, for example,
- ** \frac{.*}{x} matches \frac{x+\frac{y}{x}}{z} with .* being 'x+\frac{y'.
- **
- ** @param unmatched
- ** Number of open braces that must remain open at the end for the verification to succeed.
- **/
-#if QTSEARCH
-bool braces_match(QString const & beg,
-		  int unmatched = 0)
-#else
-bool braces_match(string const & beg,
-		int unmatched = 0)
-#endif
-{
-	int open_pars = 0;
-#if QTSEARCH
-	LYXERR(Debug::FIND, "Checking " << unmatched << " unmatched braces in '" << beg.toStdString() << "'");
-#else
-	LYXERR(Debug::FIND, "Checking " << unmatched << " unmatched braces in '" << beg << "'");
-#endif
-	int lastidx = beg.size();
-	for (int i=0; i < lastidx; ++i) {
-		// Skip escaped braces in the count
-#if QTSEARCH
-		QChar c = beg.at(i);
-#else
-		char c = beg.at(i);
-#endif
-		if (c == '\\') {
-			++i;
-			if (i >= lastidx)
-				break;
-		} else if (c == '{') {
-			++open_pars;
-		} else if (c == '}') {
-			if (open_pars == 0) {
-				LYXERR(Debug::FIND, "Found unmatched closed brace");
-				return false;
-			} else
-				--open_pars;
-		}
-	}
-	if (open_pars != unmatched) {
-		LYXERR(Debug::FIND, "Found " << open_pars
-		       << " instead of " << unmatched
-		       << " unmatched open braces at the end of count");
-		return false;
-	}
-	LYXERR(Debug::FIND, "Braces match as expected");
-	return true;
-}
-#endif
 
 class MatchResult {
 public:
@@ -913,16 +933,14 @@ public:
 
 static MatchResult::range interpretMatch(MatchResult &oldres, MatchResult &newres)
 {
-  int range = oldres.match_len;
-  if (range > 0) range--;
-  if (newres.match2end < oldres.match2end - oldres.match_len)
+  if (newres.match2end < oldres.match2end)
     return MatchResult::newIsTooFar;
   if (newres.match_len < oldres.match_len)
     return MatchResult::newIsTooFar;
-  if ((newres.match_len == oldres.match_len) &&
-      (newres.match2end < oldres.match2end + range) &&
-      (newres.match2end > oldres.match2end - range)) {
-    return MatchResult::newIsBetter;
+
+  if (newres.match_len == oldres.match_len) {
+    if (newres.match2end == oldres.match2end)
+      return MatchResult::newIsBetter;
   }
   return MatchResult::newIsInvalid;
 }
@@ -1030,7 +1048,10 @@ static docstring buffer_to_latex(Buffer & buffer)
 	runparams.linelen = 10000; //lyxrc.plaintext_linelen;
 	// No side effect of file copying and image conversion
 	runparams.dryrun = true;
-	runparams.for_search = true;
+	if (ignoreFormats.getDeleted())
+		runparams.for_searchAdv = OutputParams::SearchWithoutDeleted;
+	else
+		runparams.for_searchAdv = OutputParams::SearchWithDeleted;
 	pit_type const endpit = buffer.paragraphs().size();
 	for (pit_type pit = 0; pit != endpit; ++pit) {
 		TeXOnePar(buffer, buffer.text(), pit, os, runparams);
@@ -1052,21 +1073,28 @@ static docstring stringifySearchBuffer(Buffer & buffer, FindAndReplaceOptions co
 		runparams.flavor = Flavor::XeTeX;
 		runparams.linelen = 10000; //lyxrc.plaintext_linelen;
 		runparams.dryrun = true;
-		runparams.for_search = true;
+		int option = AS_STR_INSETS |AS_STR_PLAINTEXT;
+		if (ignoreFormats.getDeleted()) {
+			option |= AS_STR_SKIPDELETE;
+			runparams.for_searchAdv = OutputParams::SearchWithoutDeleted;
+		}
+		else {
+			runparams.for_searchAdv = OutputParams::SearchWithDeleted;
+		}
 		for (pos_type pit = pos_type(0); pit < (pos_type)buffer.paragraphs().size(); ++pit) {
 			Paragraph const & par = buffer.paragraphs().at(pit);
 			LYXERR(Debug::FIND, "Adding to search string: '"
 			       << par.asString(pos_type(0), par.size(),
-					       AS_STR_INSETS | AS_STR_SKIPDELETE | AS_STR_PLAINTEXT,
+					       option,
 					       &runparams)
 			       << "'");
 			str += par.asString(pos_type(0), par.size(),
-					    AS_STR_INSETS | AS_STR_SKIPDELETE | AS_STR_PLAINTEXT,
+					    option,
 					    &runparams);
 		}
 		// Even in ignore-format we have to remove "\text{}, \lyxmathsym{}" parts
 		string t = to_utf8(str);
-		while (regex_replace(t, t, "\\\\(text|lyxmathsym)\\{([^\\}]*)\\}", "$2"));
+		while (regex_replace(t, t, "\\\\(text|lyxmathsym|ensuremath)\\{([^\\}]*)\\}", "$2"));
 		str = from_utf8(t);
 	}
 	return str;
@@ -1387,9 +1415,6 @@ void Intervall::addIntervall(int low, int upper)
   }
 }
 
-typedef map<string, string> AccentsMap;
-static AccentsMap accents = map<string, string>();
-
 static void buildaccent(string n, string param, string values)
 {
   stringstream s(n);
@@ -1488,6 +1513,8 @@ static void buildAccentsMap()
   accents["latexe"]        = getutf8(0xf0013);
   accents["LaTeXe"]        = getutf8(0xf0013);
   accents["lyxarrow"]      = getutf8(0xf0020);
+  accents["braceleft"]     = getutf8(0xf0030);
+  accents["braceright"]    = getutf8(0xf0031);
   accents["backslash lyx"]           = getutf8(0xf0010);	// Used logos inserted with starting \backslash
   accents["backslash LyX"]           = getutf8(0xf0010);
   accents["backslash tex"]           = getutf8(0xf0011);
@@ -1562,13 +1589,14 @@ void Intervall::removeAccents()
     buildAccentsMap();
   static regex const accre("\\\\(([\\S]|grave|breve|ddot|dot|acute|dacute|mathring|check|hat|bar|tilde|subdot|ogonek|"
          "cedilla|subring|textsubring|subhat|textsubcircum|subtilde|textsubtilde|dgrave|textdoublegrave|rcap|textroundcap|slashed)\\{[^\\{\\}]+\\}"
-      "|((i|imath|jmath|cdot|[a-z]+space)|((backslash )?([lL]y[xX]|[tT]e[xX]|[lL]a[tT]e[xX]e?|lyxarrow))|guillemot(left|right)|textasciicircum|mathcircumflex|sim)(?![a-zA-Z]))");
+      "|((i|imath|jmath|cdot|[a-z]+space)|((backslash )?([lL]y[xX]|[tT]e[xX]|[lL]a[tT]e[xX]e?|lyxarrow))|(brace|guillemot)(left|right)|textasciicircum|mathcircumflex|sim)(?![a-zA-Z]))");
   smatch sub;
   for (sregex_iterator itacc(par.begin(), par.end(), accre), end; itacc != end; ++itacc) {
     sub = *itacc;
     string key = sub.str(1);
-    if (accents.find(key) != accents.end()) {
-      string val = accents[key];
+    AccentsIterator it_ac = accents.find(key);
+    if (it_ac != accents.end()) {
+      string val = it_ac->second;
       size_t pos = sub.position(size_t(0));
       for (size_t i = 0; i < val.size(); i++) {
         par[pos+i] = val[i];
@@ -1643,9 +1671,10 @@ int Intervall::nextNotIgnored(int start) const
     return start;
 }
 
-typedef map<string, KeyInfo> KeysMap;
+typedef unordered_map<string, KeyInfo> KeysMap;
+typedef unordered_map<string, KeyInfo>::const_iterator KeysIterator;
 typedef vector< KeyInfo> Entries;
-static KeysMap keys = map<string, KeyInfo>();
+static KeysMap keys = unordered_map<string, KeyInfo>();
 
 class LatexInfo {
  private:
@@ -1760,7 +1789,9 @@ class MathInfo {
   public:
     string wait;
     size_t mathEnd;
+    size_t mathpostfixsize;
     size_t mathStart;
+    size_t mathprefixsize;
     size_t mathSize;
   };
   size_t actualIdx_;
@@ -1769,12 +1800,14 @@ class MathInfo {
   MathInfo() {
     actualIdx_ = 0;
   }
-  void insert(string const & wait, size_t start, size_t end) {
+  void insert(string const & wait, size_t start, size_t prefixsize, size_t end, size_t postfixsize) {
     MathEntry m = MathEntry();
     m.wait = wait;
     m.mathStart = start;
-    m.mathEnd = end;
-    m.mathSize = end - start;
+    m.mathprefixsize = prefixsize;
+    m.mathEnd = end + postfixsize;
+    m.mathpostfixsize = postfixsize;
+    m.mathSize = m.mathEnd - m.mathStart;
     entries_.push_back(m);
   }
   bool empty() const { return entries_.empty(); };
@@ -1789,6 +1822,18 @@ class MathInfo {
       return 100000;                    /*  definitely enough? */
     }
     return entries_[actualIdx_].mathStart;
+  }
+  size_t getPrefixSize() const {
+    if (entries_.empty() || (actualIdx_ >= entries_.size())) {
+      return 0;
+    }
+    return entries_[actualIdx_].mathprefixsize;
+  }
+  size_t getPostfixSize() const {
+    if (entries_.empty() || (actualIdx_ >= entries_.size())) {
+      return 0;
+    }
+    return entries_[actualIdx_].mathpostfixsize;
   }
   size_t getFirstPos() {
     actualIdx_ = 0;
@@ -1805,7 +1850,7 @@ class MathInfo {
 
 void LatexInfo::buildEntries(bool isPatternString)
 {
-  static regex const rmath("(\\\\)*(\\$|\\\\\\[|\\\\\\]|\\\\(begin|end)\\{((eqnarray|equation|flalign|gather|multline|align|alignat)\\*?)\\})");
+  static regex const rmath("(\\\\)*(\\$|\\\\\\[|\\\\\\]|\\\\(begin|end)\\{((eqnarray|equation|flalign|gather|multline|align|x?x?alignat)\\*?\\})(\\{[0-9]+\\})?)");
   static regex const rkeys("(\\\\)*(\\$|\\\\\\[|\\\\\\]|\\\\((([a-zA-Z]+\\*?)(\\{([a-z]+\\*?)\\}|=[0-9]+[a-z]+)?)))");
   static bool disableLanguageOverride = false;
   smatch sub, submath;
@@ -1820,8 +1865,10 @@ void LatexInfo::buildEntries(bool isPatternString)
   KeyInfo found;
   bool math_end_waiting = false;
   size_t math_pos = 10000;
+  size_t math_prefix_size = 1;
   string math_end;
   static vector<string> usedText = vector<string>();
+  static bool removeMathHull = false;
 
   interval_.removeAccents();
 
@@ -1835,17 +1882,17 @@ void LatexInfo::buildEntries(bool isPatternString)
       size_t pos = submath.position(size_t(2));
       if ((math_end == "$") &&
           (submath.str(2) == "$")) {
-        mi.insert("$", math_pos, pos + 1);
+        mi.insert("$", math_pos, 1, pos, 1);
         math_end_waiting = false;
       }
       else if ((math_end == "\\]") &&
                (submath.str(2) == "\\]")) {
-        mi.insert("\\]", math_pos, pos + 2);
+        mi.insert("\\]", math_pos, 2, pos, 2);
         math_end_waiting = false;
       }
       else if ((submath.str(3).compare("end") == 0) &&
-          (submath.str(4).compare(math_end) == 0)) {
-        mi.insert(math_end, math_pos, pos + submath.str(2).length());
+          (submath.str(5).compare(math_end) == 0)) {
+        mi.insert(math_end, math_pos, math_prefix_size, pos, submath.str(2).length());
         math_end_waiting = false;
       }
       else
@@ -1854,8 +1901,9 @@ void LatexInfo::buildEntries(bool isPatternString)
     else {
       if (submath.str(3).compare("begin") == 0) {
         math_end_waiting = true;
-        math_end = submath.str(4);
+        math_end = submath.str(5);
         math_pos = submath.position(size_t(2));
+        math_prefix_size = submath.str(2).length();
       }
       else if (submath.str(2).compare("\\[") == 0) {
         math_end_waiting = true;
@@ -1881,9 +1929,12 @@ void LatexInfo::buildEntries(bool isPatternString)
       // Disable language
       keys["foreignlanguage"].disabled = true;
       disableLanguageOverride = true;
+      removeMathHull = false;
     }
-    else
+    else {
+      removeMathHull = true;	// used later if not isPatternString
       disableLanguageOverride = false;
+    }
   }
   else {
     if (disableLanguageOverride) {
@@ -1905,9 +1956,10 @@ void LatexInfo::buildEntries(bool isPatternString)
         key = sub.str(2);
       }
     }
-    if (keys.find(key) != keys.end()) {
-      if (keys[key].keytype == KeyInfo::headRemove) {
-        KeyInfo found1 = keys[key];
+    KeysIterator it_key = keys.find(key);
+    if (it_key != keys.end()) {
+      if (it_key->second.keytype == KeyInfo::headRemove) {
+        KeyInfo found1 = it_key->second;
         found1.disabled = true;
         found1.head = "\\" + key + "{";
         found1._tokenstart = sub.position(size_t(2));
@@ -1941,7 +1993,7 @@ void LatexInfo::buildEntries(bool isPatternString)
         mi.incrEntry();
         math_pos = mi.getStartPos();
       }
-      if (keys.find(key) == keys.end()) {
+      if (it_key == keys.end()) {
         found = KeyInfo(KeyInfo::isStandard, 0, true);
         LYXERR(Debug::INFO, "Undefined key " << key << " ==> will be used as text");
         found = KeyInfo(KeyInfo::isText, 0, false);
@@ -1974,6 +2026,17 @@ void LatexInfo::buildEntries(bool isPatternString)
         found._dataStart = found._dataEnd;
         found.parenthesiscount = 0;
         found.head = interval_.par.substr(found._tokenstart, found._tokensize);
+	if (removeMathHull) {
+	  interval_.addIntervall(found._tokenstart, found._tokenstart + mi.getPrefixSize());
+	  interval_.addIntervall(found._dataEnd - mi.getPostfixSize(), found._dataEnd);
+	}
+	else {
+	  // Treate all math constructs as simple math
+	  interval_.par[found._tokenstart] = '$';
+	  interval_.par[found._dataEnd - mi.getPostfixSize()] = '$';
+	  interval_.addIntervall(found._tokenstart + 1, found._tokenstart + mi.getPrefixSize());
+	  interval_.addIntervall(found._dataEnd - mi.getPostfixSize() + 1, found._dataEnd);
+	}
         evaluatingMath = true;
       }
       else {
@@ -2213,7 +2276,7 @@ void LatexInfo::buildKeys(bool isPatternString)
   if (keysBuilt && !isPatternString) return;
 
   // Keys to ignore in any case
-  makeKey("text|textcyrillic|lyxmathsym", KeyInfo(KeyInfo::headRemove, 1, true), true);
+  makeKey("text|textcyrillic|lyxmathsym|ensuremath", KeyInfo(KeyInfo::headRemove, 1, true), true);
   // Known standard keys with 1 parameter.
   // Split is done, if not at start of region
   makeKey("textsf|textss|texttt", KeyInfo(KeyInfo::isStandard, 1, ignoreFormats.getFamily()), isPatternString);
@@ -2242,7 +2305,6 @@ void LatexInfo::buildKeys(bool isPatternString)
   // Known charaters
   // No split
   makeKey("backslash|textbackslash|slash",  KeyInfo(KeyInfo::isChar, 0, false), isPatternString);
-  makeKey("braceleft|braceright",           KeyInfo(KeyInfo::isChar, 0, false), isPatternString);
   makeKey("textasciicircum|textasciitilde", KeyInfo(KeyInfo::isChar, 0, false), isPatternString);
   makeKey("textasciiacute|texemdash",       KeyInfo(KeyInfo::isChar, 0, false), isPatternString);
   makeKey("dots|ldots",                     KeyInfo(KeyInfo::isChar, 0, false), isPatternString);
@@ -2802,7 +2864,10 @@ int LatexInfo::process(ostringstream & os, KeyInfo const & actual )
   }
   if (dstart < output_end)
     interval_.output(os, output_end);
-  interval_.addIntervall(actual._tokenstart, end);
+  if (nextKeyIdx < 0)
+    interval_.addIntervall(0, end);
+  else
+    interval_.addIntervall(actual._tokenstart, end);
   return nextKeyIdx;
 }
 
@@ -2886,7 +2951,7 @@ string splitOnKnownMacros(string par, bool isPatternString)
  * Resulting modified string is set to "", if
  * the searched tex does not contain all the features in the search pattern
  */
-static string correctlanguagesetting(string par, bool isPatternString, bool withformat)
+static string correctlanguagesetting(string par, bool isPatternString, bool withformat, lyx::Buffer *pbuf = nullptr)
 {
 	static Features regex_f;
 	static int missed = 0;
@@ -2906,8 +2971,24 @@ static string correctlanguagesetting(string par, bool isPatternString, bool with
 		// Split the latex input into pieces which
 		// can be digested by our search engine
 		LYXERR(Debug::FIND, "input: \"" << par << "\"");
+		if (isPatternString && (pbuf != nullptr)) { // Check if we should disable/enable test for language
+			// We check for polyglossia, because in runparams.flavor we use Flavor::XeTeX
+			string doclang = pbuf->params().language->polyglossia();
+			static regex langre("\\\\(foreignlanguage)\\{([^\\}]+)\\}");
+			smatch sub;
+			bool toIgnoreLang = true;
+			for (sregex_iterator it(par.begin(), par.end(), langre), end; it != end; ++it) {
+				sub = *it;
+				if (sub.str(2) != doclang) {
+					toIgnoreLang = false;
+					break;
+				}
+			}
+			setIgnoreFormat("language", toIgnoreLang, false);
+
+		}
 		result = splitOnKnownMacros(par.substr(0,parlen), isPatternString);
-		LYXERR(Debug::FIND, "After split: \"" << result << "\"");
+		LYXERR(Debug::FIND, "After splitOnKnownMacros:\n\"" << result << "\"");
 	}
 	else
 		result = par.substr(0, parlen);
@@ -3073,8 +3154,8 @@ MatchStringAdv::MatchStringAdv(lyx::Buffer & buf, FindAndReplaceOptions & opt)
 
 	size_t lead_size = 0;
 	// correct the language settings
-	par_as_string = correctlanguagesetting(par_as_string, true, !opt.ignoreformat);
-	opt.matchstart = false;
+	par_as_string = correctlanguagesetting(par_as_string, true, !opt.ignoreformat, &buf);
+	opt.matchAtStart = false;
 	if (!use_regexp) {
 		identifyClosing(par_as_string); // Removes math closings ($, ], ...) at end of string
 		if (opt.ignoreformat) {
@@ -3120,11 +3201,10 @@ MatchStringAdv::MatchStringAdv(lyx::Buffer & buf, FindAndReplaceOptions & opt)
 			LYXERR(Debug::FIND, "lead_as_regexp is '" << lead_as_regexp << "'");
 			LYXERR(Debug::FIND, "par_as_string now is '" << par_as_string << "'");
 		}
-		LYXERR(Debug::FIND, "par_as_string before escape_for_regex() is '" << par_as_string << "'");
-		par_as_string = escape_for_regex(par_as_string);
+		// LYXERR(Debug::FIND, "par_as_string before escape_for_regex() is '" << par_as_string << "'");
+		par_as_string = escape_for_regex(par_as_string, !opt.ignoreformat);
 		// Insert (.*?) before trailing closure of math, macros and environments, so to catch parts of them.
-		LYXERR(Debug::FIND, "par_as_string now is '" << par_as_string << "'");
-		LYXERR(Debug::FIND, "par_as_string after correctRegex is '" << par_as_string << "'");
+		// LYXERR(Debug::FIND, "par_as_string now is '" << par_as_string << "'");
 		++close_wildcards;
 		size_t lng = par_as_string.size();
 		if (!opt.ignoreformat) {
@@ -3144,14 +3224,15 @@ MatchStringAdv::MatchStringAdv(lyx::Buffer & buf, FindAndReplaceOptions & opt)
 			if (lng < par_as_string.size())
 				par_as_string = par_as_string.substr(0,lng);
 		}
+		LYXERR(Debug::FIND, "par_as_string after correctRegex is '" << par_as_string << "'");
 		if ((lng > 0) && (par_as_string[0] == '^')) {
 			par_as_string = par_as_string.substr(1);
 			--lng;
-			opt.matchstart = true;
+			opt.matchAtStart = true;
 		}
-		LYXERR(Debug::FIND, "par_as_string now is '" << par_as_string << "'");
-		LYXERR(Debug::FIND, "Open braces: " << open_braces);
-		LYXERR(Debug::FIND, "Replaced text (to be used as regex): " << par_as_string);
+		// LYXERR(Debug::FIND, "par_as_string now is '" << par_as_string << "'");
+		// LYXERR(Debug::FIND, "Open braces: " << open_braces);
+		// LYXERR(Debug::FIND, "Replaced text (to be used as regex): " << par_as_string);
 
 		// If entered regexp must match at begin of searched string buffer
 		// Kornel: Added parentheses to use $1 for size of the leading string
@@ -3179,68 +3260,6 @@ MatchStringAdv::MatchStringAdv(lyx::Buffer & buf, FindAndReplaceOptions & opt)
 	}
 }
 
-#if 0
-// Count number of characters in string
-// {]} ==> 1
-// \&  ==> 1
-// --- ==> 1
-// \\[a-zA-Z]+ ==> 1
-#if QTSEARCH
-static int computeSize(QStringRef s, int len)
-#define isLyxAlpha(arg) arg.isLetter()
-#else
-static int computeSize(string s, int len)
-#define isLyxAlpha(arg) isalpha(arg)
-#endif
-{
-	if (len == 0)
-		return 0;
-	int skip = 1;
-	int count = 0;
-	for (int i = 0; i < len; i += skip, count++) {
-		if (s.at(i) == '\\') {
-			skip = 2;
-			if (i + 1 < len && isLyxAlpha(s.at(i+1))) {
-				for (int j = 2;  i+j < len; j++) {
-					if (! isLyxAlpha(s.at(i+j))) {
-						if (s.at(i+j) == ' ')
-							skip++;
-						else if (s.at(i+j) == '{') {
-							if (i+j+1 < len && s.at(i+j+1) == '}')
-								skip += 2;
-							else if (i + j + 1 >= len)
-								skip++;
-						}
-						break;
-					}
-					skip++;
-				}
-			}
-		}
-		else if (s.at(i) == '{') {
-			if (i + 1 < len && s.at(i+1) == '}')
-				skip = 2;
-			else
-				skip = 3;
-		}
-		else if (s.at(i) == '-') {
-			if (i+1 < len && s.at(i+1) == '-') {
-				if (i + 2 < len && s.at(i+2) == '-')
-					skip = 3;
-				else
-					skip = 2;
-			}
-			else
-				skip = 1;
-		}
-		else {
-			skip = 1;
-		}
-	}
-	return count;
-}
-#endif
-
 MatchResult MatchStringAdv::findAux(DocIterator const & cur, int len, bool at_begin) const
 {
 	MatchResult mres;
@@ -3252,21 +3271,26 @@ MatchResult MatchStringAdv::findAux(DocIterator const & cur, int len, bool at_be
 
 	docstring docstr = stringifyFromForSearch(opt, cur, len);
 	string str;
-	if (use_regexp || opt.casesensitive)
-		str = normalize(docstr);
-	else
-		str = normalize(lowercase(docstr));
+	str = normalize(docstr);
 	if (!opt.ignoreformat) {
 		str = correctlanguagesetting(str, false, !opt.ignoreformat);
+		// remove closing '}' and '\n' to allow for use of '$' in regex
+		size_t lng = str.size();
+		while ((lng > 1) && ((str[lng -1] == '}') || (str[lng -1] == '\n')))
+			lng--;
+		if (lng != str.size()) {
+			str = str.substr(0, lng);
+		}
 	}
 	if (str.empty()) {
 		mres.match_len = -1;
 		return mres;
 	}
-	LYXERR(Debug::FIND, "Matching against     '" << lyx::to_utf8(docstr) << "'");
-	LYXERR(Debug::FIND, "After normalization: '" << str << "'");
+	LYXERR(Debug::FIND, "After normalization: Matching against:\n'" << str << "'");
 
-	if (use_regexp) {
+	LASSERT(use_regexp, /**/);
+	{
+		// use_regexp always true
 		LYXERR(Debug::FIND, "Searching in regexp mode: at_begin=" << at_begin);
 #if QTSEARCH
 		QString qstr = QString::fromStdString(str);
@@ -3320,23 +3344,25 @@ MatchResult MatchStringAdv::findAux(DocIterator const & cur, int len, bool at_be
 		// we have to 'unify' the length of the post-match.
 		// Done by ignoring closing parenthesis and linefeeds at string end
 		int matchend = match.capturedEnd(0);
-		while (mres.match_len > 0) {
-		  QChar c = qstr.at(matchend - 1);
-		  if (c == '\n') {
-		    mres.match_len--;
-		    matchend--;
-		  }
-		  else
-		    break;
-		}
 		size_t strsize = qstr.size();
-		while (strsize > (size_t) match.capturedEnd(0)) {
-			QChar c = qstr.at(strsize-1);
-			if ((c == '\n') || (c == '}')) {
-				--strsize;
+		if (!opt.ignoreformat) {
+			while (mres.match_len > 0) {
+				QChar c = qstr.at(matchend - 1);
+				if ((c == '\n') || (c == '}') || (c == '{')) {
+					mres.match_len--;
+					matchend--;
+				}
+				else
+					break;
 			}
-			else
-				break;
+			while (strsize > (size_t) match.capturedEnd(0)) {
+				QChar c = qstr.at(strsize-1);
+				if ((c == '\n') || (c == '}')) {
+					--strsize;
+				}
+				else
+					break;
+			}
 		}
 		// LYXERR0(qstr.toStdString());
 		mres.match2end = strsize - matchend;
@@ -3347,22 +3373,24 @@ MatchResult MatchStringAdv::findAux(DocIterator const & cur, int len, bool at_be
 		// ignore closing parenthesis and linefeeds at string end
 		size_t strend = m[0].second - m[0].first;
 		int matchend = strend;
-		while (mres.match_len > 0) {
-		  char c = str.at(matchend - 1);
-		  if ((c == '\n') || (c == '}') || (c == '{')) {
-		    mres.match_len--;
-		    matchend--;
-		  }
-		  else
-		    break;
-		}
 		size_t strsize = str.size();
-		while (strsize > strend) {
-			if ((str.at(strsize-1) == '}') || (str.at(strsize-1) == '\n')) {
-				--strsize;
+		if (!opt.ignoreformat) {
+			while (mres.match_len > 0) {
+				char c = str.at(matchend - 1);
+				if ((c == '\n') || (c == '}') || (c == '{')) {
+					mres.match_len--;
+					matchend--;
+				}
+				else
+					break;
 			}
-			else
-				break;
+			while (strsize > strend) {
+				if ((str.at(strsize-1) == '}') || (str.at(strsize-1) == '\n')) {
+					--strsize;
+				}
+				else
+					break;
+			}
 		}
 		// LYXERR0(str);
 		mres.match2end = strsize - matchend;
@@ -3390,34 +3418,6 @@ MatchResult MatchStringAdv::findAux(DocIterator const & cur, int len, bool at_be
 #endif
 		return mres;
 	}
-
-	// else !use_regexp: but all code paths above return
-	LYXERR(Debug::FIND, "Searching in normal mode: par_as_string='"
-				 << par_as_string << "', str='" << str << "'");
-	LYXERR(Debug::FIND, "Searching in normal mode: lead_as_string='"
-				 << lead_as_string << "', par_as_string_nolead='"
-				 << par_as_string_nolead << "'");
-
-	if (at_begin) {
-		LYXERR(Debug::FIND, "size=" << par_as_string.size()
-					 << ", substr='" << str.substr(0, par_as_string.size()) << "'");
-		if (str.substr(0, par_as_string.size()) == par_as_string) {
-			mres.match_len = par_as_string.size();
-			mres.match2end = str.size();
-			mres.pos = 0;
-			return mres;
-		}
-	} else {
-		// Start the search _after_ the leading part
-		size_t pos = str.find(par_as_string_nolead, lead_as_string.size());
-		if (pos != string::npos) {
-			mres.match_len = par_as_string.size();
-			mres.match2end = str.size() - pos;
-			mres.pos = pos;
-			return mres;
-		}
-	}
-	return mres;
 }
 
 
@@ -3427,9 +3427,9 @@ MatchResult MatchStringAdv::operator()(DocIterator const & cur, int len, bool at
 	int res = mres.match_len;
 	LYXERR(Debug::FIND,
 	       "res=" << res << ", at_begin=" << at_begin
-	       << ", matchstart=" << opt.matchstart
+	       << ", matchAtStart=" << opt.matchAtStart
 	       << ", inTexted=" << cur.inTexted());
-	if (opt.matchstart) {
+	if (opt.matchAtStart) {
 		if (cur.pos() != 0)
 			mres.match_len = 0;
 		else if (mres.match_prefix > 0)
@@ -3499,7 +3499,7 @@ string MatchStringAdv::normalize(docstring const & s) const
 	// Remove stale empty \emph{}, \textbf{} and similar blocks from latexify
 	// Kornel: Added textsl, textsf, textit, texttt and noun
 	// + allow to seach for colored text too
-	LYXERR(Debug::FIND, "Removing stale empty \\emph{}, \\textbf{}, \\*section{} macros from: " << t);
+	LYXERR(Debug::FIND, "Removing stale empty macros from: " << t);
 	while (regex_replace(t, t, "\\\\(emph|noun|text(bf|sl|sf|it|tt)|(u|uu)line|(s|x)out|uwave)(\\{(\\{\\})?\\})+", ""))
 		LYXERR(Debug::FIND, "  further removing stale empty \\emph{}, \\textbf{} macros from: " << t);
 	while (regex_replace(t, t, "\\\\((sub)?(((sub)?section)|paragraph)|part)\\*?(\\{(\\{\\})?\\})+", ""))
@@ -3526,11 +3526,18 @@ docstring stringifyFromCursor(DocIterator const & cur, int len)
 		runparams.linelen = 10000; //lyxrc.plaintext_linelen;
 		// No side effect of file copying and image conversion
 		runparams.dryrun = true;
-		runparams.for_search = true;
+		int option = AS_STR_INSETS | AS_STR_PLAINTEXT;
+		if (ignoreFormats.getDeleted()) {
+			option |= AS_STR_SKIPDELETE;
+			runparams.for_searchAdv = OutputParams::SearchWithoutDeleted;
+		}
+		else {
+			runparams.for_searchAdv = OutputParams::SearchWithDeleted;
+		}
 		LYXERR(Debug::FIND, "Stringifying with cur: "
 		       << cur << ", from pos: " << cur.pos() << ", end: " << end);
 		return par.asString(cur.pos(), end,
-			AS_STR_INSETS | AS_STR_SKIPDELETE | AS_STR_PLAINTEXT,
+			option,
 			&runparams);
 	} else if (cur.inMathed()) {
 		CursorSlice cs = cur.top();
@@ -3558,9 +3565,11 @@ docstring stringifyFromCursor(DocIterator const & cur, int len)
  */
 docstring latexifyFromCursor(DocIterator const & cur, int len)
 {
+	/*
 	LYXERR(Debug::FIND, "Latexifying with len=" << len << " from cursor at pos: " << cur);
 	LYXERR(Debug::FIND, "  with cur.lastpost=" << cur.lastpos() << ", cur.lastrow="
 	       << cur.lastrow() << ", cur.lastcol=" << cur.lastcol());
+	*/
 	Buffer const & buf = *cur.buffer();
 
 	odocstringstream ods;
@@ -3572,7 +3581,12 @@ docstring latexifyFromCursor(DocIterator const & cur, int len)
 	runparams.linelen = 8000; //lyxrc.plaintext_linelen;
 	// No side effect of file copying and image conversion
 	runparams.dryrun = true;
-	runparams.for_search = true;
+	if (ignoreFormats.getDeleted()) {
+		runparams.for_searchAdv = OutputParams::SearchWithoutDeleted;
+	}
+	else {
+		runparams.for_searchAdv = OutputParams::SearchWithDeleted;
+	}
 
 	if (cur.inTexted()) {
 		// @TODO what about searching beyond/across paragraph breaks ?
@@ -3664,20 +3678,24 @@ static void displayMResult(MatchResult &mres, string from, DocIterator & cur)
  ** be selected
  ** Return the cur.pos() difference between start and end of found match
  **/
-MatchResult &findAdvFinalize(DocIterator & cur, MatchStringAdv const & match, MatchResult const & expected = MatchResult(-1))
+MatchResult findAdvFinalize(DocIterator & cur, MatchStringAdv const & match, MatchResult const & expected = MatchResult(-1))
 {
 	// Search the foremost position that matches (avoids find of entire math
 	// inset when match at start of it)
 	DocIterator old_cur(cur.buffer());
 	MatchResult mres;
 	static MatchResult fail = MatchResult();
-	static MatchResult max_match;
+	MatchResult max_match;
 	// If (prefix_len > 0) means that forwarding 1 position will remove the complete entry
 	// Happens with e.g. hyperlinks
 	// either one sees "http://www.bla.bla" or nothing
 	// so the search for "www" gives prefix_len = 7 (== sizeof("http://")
 	// and although we search for only 3 chars, we find the whole hyperlink inset
 	bool at_begin = (expected.match_prefix == 0);
+	if (!match.opt.forward && match.opt.ignoreformat) {
+		if (expected.pos > 0)
+			return fail;
+	}
 	LASSERT(at_begin, /**/);
 	if (expected.match_len > 0 && at_begin) {
 		// Search for deepest match
@@ -3722,29 +3740,9 @@ MatchResult &findAdvFinalize(DocIterator & cur, MatchStringAdv const & match, Ma
 	int len = 1;
 	if (cur.pos() + len > cur.lastpos())
 	  return fail;
-	// regexp should use \w+, \S+, or \b(some string)\b
-	// to search for whole words
-	if (match.opt.matchword && !match.use_regexp) {
-	  LYXERR(Debug::FIND, "verifying unmatch with len = " << len);
-	  while (cur.pos() + len <= cur.lastpos() && match(cur, len).match_len <= 0) {
-	    ++len;
-	    LYXERR(Debug::FIND, "verifying unmatch with len = " << len);
-	  }
-	  // Length of matched text (different from len param)
-	  static MatchResult old_match = match(cur, len, at_begin);
-	  if (old_match.match_len < 0)
-	    old_match = fail;
-	  MatchResult new_match;
-	  // Greedy behaviour while matching regexps
-	  while ((new_match = match(cur, len + 1, at_begin)).match_len > old_match.match_len) {
-	    ++len;
-	    old_match = new_match;
-	    LYXERR(Debug::FIND, "verifying   match with len = " << len);
-	  }
-	  displayMres(old_match, "SEARCH RESULT", cur)
-	  return old_match;
-	}
-	else {
+
+	LASSERT(match.use_regexp, /**/);
+	{
           int minl = 1;
           int maxl = cur.lastpos() - cur.pos();
           // Greedy behaviour while matching regexps
@@ -3828,6 +3826,8 @@ int findForwardAdv(DocIterator & cur, MatchStringAdv & match)
 	if (!cur)
 		return 0;
 	bool repeat = false;
+	DocIterator orig_cur;	// to be used if repeat not successful
+	MatchResult orig_mres;
 	while (!theApp()->longOperationCancelled() && cur) {
 		//(void) findAdvForwardInnermost(cur);
 		LYXERR(Debug::FIND, "findForwardAdv() cur: " << cur);
@@ -3850,10 +3850,10 @@ int findForwardAdv(DocIterator & cur, MatchStringAdv & match)
 		else {	// match_len > 0
 			// Try to find the begin of searched string
 			int increment;
-			int firstInvalid = 100000;
+			int firstInvalid = cur.lastpos() - cur.pos();
 			{
 				int incrmatch = (mres.match_prefix + mres.pos - mres.leadsize + 1)*3/4;
-				int incrcur = (cur.lastpos() - cur.pos() + 1 )*3/4;
+				int incrcur = (firstInvalid + 1 )*3/4;
 				if (incrcur < incrmatch)
 					increment = incrcur;
 				else
@@ -3864,70 +3864,69 @@ int findForwardAdv(DocIterator & cur, MatchStringAdv & match)
 			LYXERR(Debug::FIND, "Set increment to " << increment);
 			while (increment > 0) {
 				DocIterator old_cur = cur;
-				size_t skipping = cur.depth();
-				for (int i = 0; i < increment && cur; i++) {
-					cur.forwardPos();
-					while (cur && cur.depth() > skipping) {
-						cur.pos() = cur.lastpos();
-						cur.forwardPos();
-					}
-				}
-				if (! cur || (cur.pit() > old_cur.pit())) {
-					// Are we outside of the paragraph?
-					// This can happen if moving past some UTF8-encoded chars
-					cur = old_cur;
+				if (cur.pos() + increment >= cur.lastpos()) {
 					increment /= 2;
+					continue;
 				}
-				else {
-					MatchResult mres2 = match(cur, -1, false);
-					displayMres(mres2, "findForwardAdv loop", cur)
-					switch (interpretMatch(mres, mres2)) {
+				cur.pos() = cur.pos() + increment;
+				MatchResult mres2 = match(cur, -1, false);
+				displayMres(mres2, "findForwardAdv loop", cur)
+				switch (interpretMatch(mres, mres2)) {
 					case MatchResult::newIsTooFar:
-					  // behind the expected match
-					  firstInvalid = increment;
-					  cur = old_cur;
-					  increment /= 2;
-					  break;
+						// behind the expected match
+						firstInvalid = increment;
+						cur = old_cur;
+						increment /= 2;
+						break;
 					case MatchResult::newIsBetter:
-					  // not reached yet, but cur.pos()+increment is bettert
-					  mres = mres2;
-					  firstInvalid -= increment;
-					  if (increment > firstInvalid*3/4)
-					    increment = firstInvalid*3/4;
-					  if ((mres2.pos == mres2.leadsize) && (increment >= mres2.match_prefix)) {
-					    if (increment >= mres2.match_prefix)
-					      increment = (mres2.match_prefix+1)*3/4;
-					  }
-					  break;
+						// not reached yet, but cur.pos()+increment is bettert
+						mres = mres2;
+						firstInvalid -= increment;
+						if (increment > firstInvalid*3/4)
+							increment = firstInvalid*3/4;
+						if ((mres2.pos == mres2.leadsize) && (increment >= mres2.match_prefix)) {
+							if (increment >= mres2.match_prefix)
+								increment = (mres2.match_prefix+1)*3/4;
+						}
+						break;
 					default:
-					  // Todo@
-					  // Handle not like MatchResult::newIsTooFar
-					  LYXERR0( "Something is wrong: Increment = " << increment << " match_prefix = " << mres.match_prefix);
-					  firstInvalid--;
-					  increment = increment*3/4;
-					  cur = old_cur;
-					  break;
-					}
+						// Todo@
+						// Handle not like MatchResult::newIsTooFar
+						LYXERR0( "Probably too far: Increment = " << increment << " match_prefix = " << mres.match_prefix);
+						firstInvalid--;
+						increment = increment*3/4;
+						cur = old_cur;
+					break;
 				}
 			}
-			if (mres.match_len > 0 && mres.match_prefix + mres.pos - mres.leadsize > 0) {
-				repeat = true;
-				cur.forwardPos();
-				continue;
+			if (mres.match_len > 0) {
+				if (mres.match_prefix + mres.pos - mres.leadsize > 0) {
+					// The match seems to indicate some deeper level 
+					repeat = true;
+					orig_cur = cur;
+					orig_mres = mres;
+					cur.forwardPos();
+					continue;
+				}
+			}
+			else if (repeat) {
+				// should never be reached.
+				cur = orig_cur;
+				mres = orig_mres;
 			}
 			// LYXERR0("Leaving first loop");
 			LYXERR(Debug::FIND, "Finalizing 1");
 			MatchResult found_match = findAdvFinalize(cur, match, mres);
 			if (found_match.match_len > 0) {
-			  LASSERT(found_match.pos_len > 0, /**/);
-			  match.FillResults(found_match);
-			  return found_match.pos_len;
+				LASSERT(found_match.pos_len > 0, /**/);
+				match.FillResults(found_match);
+				return found_match.pos_len;
 			}
 			else {
-			  // try next possible match
-			  cur.forwardPos();
-			  repeat = false;
-			  continue;
+				// try next possible match
+				cur.forwardPos();
+				repeat = false;
+				continue;
 			}
 		}
 	}
@@ -3936,11 +3935,12 @@ int findForwardAdv(DocIterator & cur, MatchStringAdv & match)
 
 
 /// Find the most backward consecutive match within same paragraph while searching backwards.
-MatchResult &findMostBackwards(DocIterator & cur, MatchStringAdv const & match)
+MatchResult findMostBackwards(DocIterator & cur, MatchStringAdv const & match, MatchResult &expected)
 {
-	DocIterator cur_begin = doc_iterator_begin(cur.buffer());
+	DocIterator cur_begin = cur;
+	cur_begin.pos() = 0;
 	DocIterator tmp_cur = cur;
-	static MatchResult mr = findAdvFinalize(tmp_cur, match, MatchResult(-1));
+	MatchResult mr = findAdvFinalize(tmp_cur, match, expected);
 	Inset & inset = cur.inset();
 	for (; cur != cur_begin; cur.backwardPos()) {
 		LYXERR(Debug::FIND, "findMostBackwards(): cur=" << cur);
@@ -3948,7 +3948,7 @@ MatchResult &findMostBackwards(DocIterator & cur, MatchStringAdv const & match)
 		new_cur.backwardPos();
 		if (new_cur == cur || &new_cur.inset() != &inset || !match(new_cur).match_len)
 			break;
-		MatchResult new_mr = findAdvFinalize(new_cur, match, MatchResult(-1));
+		MatchResult new_mr = findAdvFinalize(new_cur, match, expected);
 		if (new_mr.match_len == mr.match_len)
 			break;
 		mr = new_mr;
@@ -3972,9 +3972,9 @@ int findBackwardsAdv(DocIterator & cur, MatchStringAdv & match)
 	bool pit_changed = false;
 	do {
 		cur.pos() = 0;
-		bool found_match = (match(cur, -1, false).match_len > 0);
+		MatchResult found_match = match(cur, -1, false);
 
-		if (found_match) {
+		if (found_match.match_len > 0) {
 			if (pit_changed)
 				cur.pos() = cur.lastpos();
 			else
@@ -3982,14 +3982,15 @@ int findBackwardsAdv(DocIterator & cur, MatchStringAdv & match)
 			LYXERR(Debug::FIND, "findBackAdv2: cur: " << cur);
 			DocIterator cur_prev_iter;
 			do {
-				found_match = (match(cur).match_len > 0);
+				found_match = match(cur);
 				LYXERR(Debug::FIND, "findBackAdv3: found_match="
-				       << found_match << ", cur: " << cur);
-				if (found_match) {
-					MatchResult found_mr = findMostBackwards(cur, match);
-					match.FillResults(found_mr);
-					LASSERT(found_mr.pos_len > 0, /**/);
-					return found_mr.pos_len;
+				       << (found_match.match_len > 0) << ", cur: " << cur);
+				if (found_match.match_len > 0) {
+					MatchResult found_mr = findMostBackwards(cur, match, found_match);
+					if (found_mr.pos_len > 0) {
+						match.FillResults(found_mr);
+						return found_mr.pos_len;
+					}
 				}
 
 				// Stop if begin of document reached
@@ -4093,7 +4094,6 @@ static void changeFirstCase(Buffer & buffer, TextCase first_case, TextCase other
 }
 } // namespace
 
-#if 1
 static bool replaceMatches(string &t, int maxmatchnum, vector <string> const & replacements)
 {
   // Should replace the string "$" + std::to_string(matchnum) with replacement
@@ -4121,7 +4121,6 @@ static bool replaceMatches(string &t, int maxmatchnum, vector <string> const & r
   t = s;
   return true;
 }
-#endif
 
 ///
 static int findAdvReplace(BufferView * bv, FindAndReplaceOptions const & opt, MatchStringAdv & matchAdv)
@@ -4177,6 +4176,7 @@ static int findAdvReplace(BufferView * bv, FindAndReplaceOptions const & opt, Ma
 		LYXERR(Debug::FIND, "Before pasteParagraphList() cur=" << cur << endl);
 		cap::pasteParagraphList(cur, repl_buffer.paragraphs(),
 					repl_buffer.params().documentClassPtr(),
+					repl_buffer.params().authors(),
 					bv->buffer().errorList("Paste"));
 		LYXERR(Debug::FIND, "After pasteParagraphList() cur=" << cur << endl);
 		sel_len = repl_buffer.paragraphs().begin()->size();
@@ -4309,7 +4309,7 @@ ostringstream & operator<<(ostringstream & os, FindAndReplaceOptions const & opt
 
 istringstream & operator>>(istringstream & is, FindAndReplaceOptions & opt)
 {
-	LYXERR(Debug::FIND, "parsing");
+	// LYXERR(Debug::FIND, "parsing");
 	string s;
 	string line;
 	getline(is, line);
@@ -4321,7 +4321,7 @@ istringstream & operator>>(istringstream & is, FindAndReplaceOptions & opt)
 			break;
 		getline(is, line);
 	}
-	LYXERR(Debug::FIND, "file_buf_name: '" << s << "'");
+	// LYXERR(Debug::FIND, "file_buf_name: '" << s << "'");
 	opt.find_buf_name = from_utf8(s);
 	is >> opt.casesensitive >> opt.matchword >> opt.forward >> opt.expandmacros >> opt.ignoreformat >> opt.replace_all;
 	is.get();	// Waste space before replace string
@@ -4335,7 +4335,7 @@ istringstream & operator>>(istringstream & is, FindAndReplaceOptions & opt)
 			break;
 		getline(is, line);
 	}
-	LYXERR(Debug::FIND, "repl_buf_name: '" << s << "'");
+	// LYXERR(Debug::FIND, "repl_buf_name: '" << s << "'");
 	opt.repl_buf_name = from_utf8(s);
 	is >> opt.keep_case;
 	int i;
@@ -4344,9 +4344,11 @@ istringstream & operator>>(istringstream & is, FindAndReplaceOptions & opt)
 	is >> i;
 	opt.restr = FindAndReplaceOptions::SearchRestriction(i);
 
+	/*
 	LYXERR(Debug::FIND, "parsed: " << opt.casesensitive << ' ' << opt.matchword << ' ' << opt.forward << ' '
 	       << opt.expandmacros << ' ' << opt.ignoreformat << ' ' << opt.keep_case << ' '
 	       << opt.scope << ' ' << opt.restr);
+	*/
 	return is;
 }
 

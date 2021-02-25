@@ -89,7 +89,7 @@ public:
 	std::string const & latexname() const { return latexname_; }
 	///
 	std::string const & itemcommand() const { return itemcommand_; }
-	/// The arguments of this layout
+	/// One argument of this layout
 	struct latexarg {
 		docstring labelstring;
 		docstring menustring;
@@ -112,10 +112,16 @@ public:
 		bool is_toc_caption = false;
 		bool free_spacing = false;
 		std::string newlinecmd;
+		/// The DocBook tag corresponding to this argument.
 		docstring docbooktag;
 		docstring docbooktagtype;
 		docstring docbookattr;
+        /// Whether this argument should be output after the main tag (default: inside). The result if the argument
+        /// should be output both before and after the main tag is undefined.
 		bool docbookargumentbeforemaintag = false;
+        /// Whether this argument should be output before the main tag (default: inside). The result if the argument
+        /// should be output both before and after the main tag is undefined.
+		bool docbookargumentaftermaintag = false;
 	};
 	///
 	typedef std::map<std::string, latexarg> LaTeXArgMap;
@@ -250,6 +256,8 @@ public:
 	std::string const & docbookitemtagtype() const;
 	///
 	std::string const & docbookforceabstracttag() const;
+	///
+	bool docbooknofontinside() const { return docbooknofontinside_; }
 	///
 	bool isParagraph() const { return latextype == LATEX_PARAGRAPH; }
 	///
@@ -573,6 +581,8 @@ private:
 	/// in LyX must be considered as the abstract if this is true); this text must be output with the specific tag
 	/// held by this attribute
 	mutable std::string docbookforceabstracttag_;
+	/// Whether font tags are allowed inside this tag.
+	bool docbooknofontinside_ = false;
 	/// Should we generate the default CSS for this layout, even if HTMLStyle
 	/// has been given? Default is false.
 	/// Note that the default CSS is output first, then the user CSS, so it is

@@ -28,13 +28,27 @@ class BufferView;
 class DocIterator;
 class FuncRequest;
 
+/** Decode the \c argument to extract search plus options from a string
+ *  that came to the LyX core in a FuncRequest wrapper.
+ */
+docstring const string2find(docstring const & argument,
+			      bool &casesensitive,
+			      bool &matchword,
+			      bool &forward,
+			      bool &wrap,
+			      bool &instant,
+			      bool &onlysel);
+
 /** Encode the parameters needed to find \c search as a string
  *  that can be dispatched to the LyX core in a FuncRequest wrapper.
  */
 docstring const find2string(docstring const & search,
 			      bool casesensitive,
 			      bool matchword,
-			      bool forward);
+			      bool forward,
+			      bool wrap,
+			      bool instant,
+			      bool onlysel);
 
 /** Encode the parameters needed to replace \c search with \c replace
  *  as a string that can be dispatched to the LyX core in a FuncRequest
@@ -46,7 +60,9 @@ docstring const replace2string(docstring const & replace,
 				 bool matchword,
 				 bool all,
 				 bool forward,
-				 bool findnext = true);
+				 bool findnext = true,
+				 bool wrap = true,
+				 bool onlysel = false);
 
 /** Parse the string encoding of the find request that is found in
  *  \c ev.argument and act on it.
@@ -54,6 +70,12 @@ docstring const replace2string(docstring const & replace,
  * \return true if the string was found.
  */
 bool lyxfind(BufferView * bv, FuncRequest const & ev);
+
+bool findOne(BufferView * bv, docstring const & searchstr,
+	     bool case_sens, bool whole, bool forward,
+	     bool find_del = true, bool check_wrap = false,
+	     bool auto_wrap = false, bool instant = false,
+	     bool onlysel = false);
 
 /** Parse the string encoding of the replace request that is found in
  *  \c ev.argument and act on it.
@@ -97,26 +119,26 @@ public:
 		SearchRestriction restr = R_EVERYTHING,
 		bool replace_all = false
 	);
-	FindAndReplaceOptions() : casesensitive(false), matchword(false), forward(false),
-	                          expandmacros(false), ignoreformat(false),
-	                          keep_case(false), scope(S_BUFFER), restr(R_EVERYTHING), replace_all(false) {}
+
+	FindAndReplaceOptions() {}
+
 	docstring find_buf_name;
-	bool casesensitive;
-	bool matchword;
-	bool forward;
-	bool matchstart;
-	bool expandmacros;
-	bool ignoreformat;
+	bool casesensitive = false;
+	bool matchword = false;
+	bool forward = false;
+	bool matchAtStart = false;
+	bool expandmacros = false;
+	bool ignoreformat = false;
 	/// This is docstring() if no replace was requested
 	docstring repl_buf_name;
-	bool keep_case;
-	SearchScope scope;
-	SearchRestriction restr;
-	bool replace_all;
+	bool keep_case = false;
+	SearchScope scope = S_BUFFER;
+	SearchRestriction restr = R_EVERYTHING;
+	bool replace_all = false;
 };
 
 /// Set the formats that should be ignored
-void setIgnoreFormat(std::string const & type, bool value);
+void setIgnoreFormat(std::string const & type, bool value, bool fromUser = true);
 
 /// Write a FindAdvOptions instance to a stringstream
 std::ostringstream & operator<<(std::ostringstream & os, lyx::FindAndReplaceOptions const & opt);

@@ -1,0 +1,38 @@
+The ctests are not convenient tests. In this file we can attempt to log the
+benefits and costs to using them so we can periodically evaluate which tests we
+should keep and which we should get rid of.
+
+Below are some objective costs:
+
+- The time it takes to run the ctests.
+- The email discussion back-and-forth.
+
+There are also some non-objective costs. The ctests are annoying and not fun to
+maintain, discuss, and fix. Although it's hard to measure this "annoyance"
+cost, it should be taken into account when we review.
+
+Below we can try to keep a log of which bugs are found with which ctests. This
+way we can see which tests are the most useful. It is difficult to objectively
+differentiate between minor bugs and important bugs.
+
+Examples where convergence tests took time and annoyance to figure out that
+they were actually "false positives" (i.e., no bug that is worth the time or
+complexity to fix):
+
+https://www.mail-archive.com/search?l=mid&q=20210125200655.e27xaaoy2belyxhw%40tallinn
+
+
+Examples where bugs were fixed because of ctests:
+
+Report : https://www.mail-archive.com/search?l=mid&q=20210126190837.pwuxhrhrikzszfrh%40tallinn
+Fix    : 92f8612a
+
+Report : https://www.mail-archive.com/search?l=mid&q=b0a33192bc5635bd1cb5596e346f9c34615ffeb4.camel%40lyx.org
+Fix    : ab1d418f
+
+Fix    : ef2b2827
+
+Fix    : 1ddc1c6b
+
+Report : https://www.mail-archive.com/search?l=mid&q=20210218051838.jbwnemfv5ilhlsls%40tallinn
+Fix    : 358e4ace

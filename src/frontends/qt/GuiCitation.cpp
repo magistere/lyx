@@ -98,10 +98,7 @@ GuiCitation::GuiCitation(GuiView & lv)
 
 	// The filter bar
 	filter_ = new FancyLineEdit(this);
-	filter_->setButtonPixmap(FancyLineEdit::Right, getPixmap("images/", "editclear", "svgz,png"));
-	filter_->setButtonVisible(FancyLineEdit::Right, true);
-	filter_->setButtonToolTip(FancyLineEdit::Right, qt_("Clear text"));
-	filter_->setAutoHideButton(FancyLineEdit::Right, true);
+	filter_->setClearButton(true);
 	filter_->setPlaceholderText(qt_("All avail. citations"));
 
 	filterBarL->addWidget(filter_, 0);
@@ -142,6 +139,8 @@ GuiCitation::GuiCitation(GuiView & lv)
 	selectionManager = new GuiSelectionManager(this, availableLV, selectedLV,
 			addPB, deletePB, upPB, downPB, &available_model_, &selected_model_, 1);
 	connect(selectionManager, SIGNAL(selectionChanged()),
+		this, SLOT(setCitedKeys()));
+	connect(selectionManager, SIGNAL(updateHook()),
 		this, SLOT(setCitedKeys()));
 	connect(selectionManager, SIGNAL(updateHook()),
 		this, SLOT(updateControls()));

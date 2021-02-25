@@ -193,44 +193,11 @@ static docstring const tabularnewline_def = from_ascii(
 	"%% Because html converters don't know tabularnewline\n"
 	"\\providecommand{\\tabularnewline}{\\\\}\n");
 
-static docstring const lyxgreyedout_def = from_ascii(
-	"%% The greyedout annotation environment\n"
-	"\\newenvironment{lyxgreyedout}\n"
-	"  {\\textcolor{note_fontcolor}\\bgroup\\ignorespaces}\n"
-	"  {\\ignorespacesafterend\\egroup}\n");
-
-static docstring const lyxgreyedout_rtl_def = from_ascii(
-	"%% The greyedout annotation environment (with RTL support)\n"
-	"\\NewEnviron{lyxgreyedout}{%\n"
-	"\\if@rl%\n"
-	"\\everypar{\\textcolor{note_fontcolor}\\beginL\\ignorespaces}%\n"
-	"\\BODY\\everypar{\\ignorespacesafterend\\endL}\n"
-	"\\else%\n"
-	"\\textcolor{note_fontcolor}\\bgroup\\ignorespaces%\n"
-	"\\BODY\\ignorespacesafterend\\egroup\n"
-	"\\fi}\n");
-
-static docstring const lyxgreyedout_luartl_def = from_ascii(
-	"%% The greyedout annotation environment (with RTL support)\n"
-	"\\NewEnviron{lyxgreyedout}{%\n"
-	"\\if@RTL%\n"
-	"\\everypar{\\color{note_fontcolor}\\pardir TRT \\textdir TRT\\ignorespaces}%\n"
-	"\\BODY\\everypar{\\ignorespacesafterend}\n"
-	"\\else%\n"
-	"\\textcolor{note_fontcolor}\\bgroup\\ignorespaces%\n"
-	"\\BODY\\ignorespacesafterend\\egroup\n"
-	"\\fi}\n");
-
-static docstring const lyxgreyedout_luartl_babel_def = from_ascii(
-	"%% The greyedout annotation environment (with RTL support)\n"
-	"\\NewEnviron{lyxgreyedout}{%\n"
-	"\\if@rl%\n"
-	"\\everypar{\\color{note_fontcolor}\\pardir TRT \\textdir TRT\\ignorespaces}%\n"
-	"\\BODY\\everypar{\\ignorespacesafterend}\n"
-	"\\else%\n"
-	"\\textcolor{note_fontcolor}\\bgroup\\ignorespaces%\n"
-	"\\BODY\\ignorespacesafterend\\egroup\n"
-	"\\fi}\n");
+static docstring const cellvarwidth_def = from_ascii(
+	"%% Variable width box for table cells\n"
+	"\\newenvironment{cellvarwidth}[1][t]\n"
+	"    {\\begin{varwidth}[#1]{\\linewidth}}\n"
+	"    {\\@finalstrut\\@arstrutbox\\end{varwidth}}\n");
 
 // We want to omit the file extension for includegraphics, but this does not
 // work when the filename contains other dots.
@@ -503,6 +470,7 @@ static docstring const textschwa_def = from_ascii(
 // split-level fractions
 static docstring const xfrac_def = from_ascii(
 	   "\\usepackage{xfrac}\n");
+
 static docstring const smallLetterFrac_def = from_ascii(
 	"\\DeclareCollectionInstance{smallLetterFrac}{xfrac}{default}{text}\n"
 	"  {phantom=c, scale-factor=1.0, slash-left-kern=-.05em}\n"
@@ -576,6 +544,52 @@ static docstring const lyxmintcaption_def = from_ascii(
 	"  \\hbox to\\linewidth{\\hfil\\box\\@tempboxa\\hfil}\\fi%\n"
 	"  \\ifx#1b\\vskip\\baselineskip\\fi\n"
 	"}\n");
+
+
+docstring const lyxgreyedoutDef(bool const rtl, bool const ct, bool const lua, bool const babel)
+{
+	odocstringstream ods;
+
+	if (rtl) {
+		ods << "%% The greyedout annotation environment (with RTL support)\n"
+		    << "\\NewEnviron{lyxgreyedout}{%\n";
+		if (lua && !babel)
+			// luabidi uses this switch
+			ods << "  \\if@RTL%\n";
+		else
+			ods << "  \\if@rl%\n";
+		ods << "    \\everypar{%\n";
+		if (lua)
+			ods << "      \\pardir TRT \\textdir TRT\\textcolor{note_fontcolor}\\ignorespaces%\n";
+		else
+			ods << "      \\textcolor{note_fontcolor}\\beginL\\ignorespaces%\n";
+		ods << "    }%\n";
+		if (ct)
+			ods << "    \\colorlet{lyxadded}{lyxadded!30}\\colorlet{lyxdeleted}{lyxdeleted!30}%\n";
+		if (lua)
+			ods << "    \\BODY\\everypar{\\ignorespacesafterend}%\n";
+		else
+			ods << "    \\BODY\\everypar{\\ignorespacesafterend\\endL}%\n";
+		ods << "  \\else%\n";
+		if (ct)
+			ods << "    \\colorlet{lyxadded}{lyxadded!30}\\colorlet{lyxdeleted}{lyxdeleted!30}%\n";
+		ods << "    \\textcolor{note_fontcolor}\\bgroup\\ignorespaces%\n"
+		    << "    \\BODY\\ignorespacesafterend\\egroup%\n"
+		    << "  \\fi%\n"
+		    << "}\n";
+	} else {
+		ods << "%% The greyedout annotation environment\n"
+		    << "\\newenvironment{lyxgreyedout}\n"
+		    << "{";
+		if (ct)
+			ods << "\\colorlet{lyxadded}{lyxadded!30}\\colorlet{lyxdeleted}{lyxdeleted!30}%\n ";
+		ods << "\\textcolor{note_fontcolor}\\bgroup\\ignorespaces}\n"
+		    << "{\\ignorespacesafterend\\egroup}\n";
+	}
+
+	return ods.str();
+}
+
 
 
 /////////////////////////////////////////////////////////////////////
@@ -1687,22 +1701,17 @@ TexString LaTeXFeatures::getMacros() const
 	if (mustProvide("NeedTabularnewline"))
 		macros << tabularnewline_def;
 
+	if (mustProvide("cellvarwidth"))
+		macros << cellvarwidth_def;
+
 	// greyed-out environment (note inset)
 	// the color is specified in the routine
 	// getColorOptions() to avoid LaTeX-package clashes
-	if (mustProvide("lyxgreyedout")) {
-		// We need different version for RTL (#8647)
-		if (hasRTLLanguage()) {
-			if (runparams_.flavor == Flavor::LuaTeX)
-				if (useBabel())
-					macros << lyxgreyedout_luartl_babel_def;
-				else
-					macros << lyxgreyedout_luartl_def;
-			else
-				macros << lyxgreyedout_rtl_def;
-		} else
-			macros << lyxgreyedout_def;
-	}
+	if (mustProvide("lyxgreyedout"))
+		// We need different version for RTL (#8647), with change tracking (#12025)
+		// and for some specific engine/language package combinations
+		macros << lyxgreyedoutDef(hasRTLLanguage(), mustProvide("ct-xcolor-ulem"),
+					  (runparams_.flavor == Flavor::LuaTeX), useBabel());
 
 	if (mustProvide("lyxdot"))
 		macros << lyxdot_def << '\n';

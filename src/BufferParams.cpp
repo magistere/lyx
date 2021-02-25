@@ -462,7 +462,9 @@ BufferParams::BufferParams()
 	isfontcolor = false;
 	// light gray is the default font color for greyed-out notes
 	notefontcolor = lyx::rgbFromHexName("#cccccc");
+	isnotefontcolor = false;
 	boxbgcolor = lyx::rgbFromHexName("#ff0000");
+	isboxbgcolor = false;
 	compressed = lyxrc.save_compressed;
 	for (int iter = 0; iter < 4; ++iter) {
 		user_defined_bullet(iter) = ITEMIZE_DEFAULTS[iter];
@@ -702,9 +704,10 @@ BufferParams::MathNumber BufferParams::getMathNumber() const
 
 
 string BufferParams::readToken(Lexer & lex, string const & token,
-	FileName const & filepath)
+	FileName const & filename)
 {
 	string result;
+	FileName const & filepath = filename.onlyPath();
 
 	if (token == "\\textclass") {
 		lex.next();
@@ -990,14 +993,13 @@ string BufferParams::readToken(Lexer & lex, string const & token,
 			}
 			if (tok == "\\color") {
 				lex.eatLine();
-				string color = lex.getString();
+				vector<string> const colors = getVectorFromString(lex.getString(), " ");
+				string const lmcolor = colors.front();
+				string dmcolor;
+				if (colors.size() > 1)
+					dmcolor = colors.back();
 				if (branch_ptr)
-					branch_ptr->setColor(color);
-				// Update also the Color table:
-				if (color == "none")
-					color = lcolor.getX11HexName(Color_background);
-				// FIXME UNICODE
-				lcolor.setColor(to_utf8(branch), color);
+					branch_ptr->setColors(lmcolor, dmcolor);
 			}
 		}
 	} else if (token == "\\index") {
@@ -1027,7 +1029,7 @@ string BufferParams::readToken(Lexer & lex, string const & token,
 					color = lcolor.getX11HexName(Color_background);
 				// FIXME UNICODE
 				if (!shortcut.empty())
-					lcolor.setColor(to_utf8(shortcut), color);
+					lcolor.setColor(to_utf8(shortcut)+ "@" + filename.absFileName(), color);
 			}
 		}
 	} else if (token == "\\author") {
@@ -1053,11 +1055,17 @@ string BufferParams::readToken(Lexer & lex, string const & token,
 		string color = lex.getString();
 		notefontcolor = lyx::rgbFromHexName(color);
 		lcolor.setColor("notefontcolor", color);
+		lcolor.setLaTeXName("notefontcolor", "note_fontcolor");
+		lcolor.setGUIName("notefontcolor", N_("greyedout inset text"));
+		// set a local name for the painter
+		lcolor.setColor("notefontcolor@" + filename.absFileName(), color);
+		isnotefontcolor = true;
 	} else if (token == "\\boxbgcolor") {
 		lex.eatLine();
 		string color = lex.getString();
 		boxbgcolor = lyx::rgbFromHexName(color);
-		lcolor.setColor("boxbgcolor", color);
+		lcolor.setColor("boxbgcolor@" + filename.absFileName(), color);
+		isboxbgcolor = true;
 	} else if (token == "\\paperwidth") {
 		lex >> paperwidth;
 	} else if (token == "\\paperheight") {
@@ -1378,16 +1386,16 @@ void BufferParams::writeFile(ostream & os, Buffer const * buf) const
 		os << "\\backgroundcolor " << lyx::X11hexname(backgroundcolor) << '\n';
 	if (isfontcolor)
 		os << "\\fontcolor " << lyx::X11hexname(fontcolor) << '\n';
-	if (notefontcolor != lyx::rgbFromHexName("#cccccc"))
+	if (isnotefontcolor)
 		os << "\\notefontcolor " << lyx::X11hexname(notefontcolor) << '\n';
-	if (boxbgcolor != lyx::rgbFromHexName("#ff0000"))
+	if (isboxbgcolor)
 		os << "\\boxbgcolor " << lyx::X11hexname(boxbgcolor) << '\n';
 
 	for (auto const & br : branchlist()) {
 		os << "\\branch " << to_utf8(br.branch())
 		   << "\n\\selected " << br.isSelected()
 		   << "\n\\filename_suffix " << br.hasFileNameSuffix()
-		   << "\n\\color " << lyx::X11hexname(br.color())
+		   << "\n\\color " << br.lightModeColor() << " " << br.darkModeColor()
 		   << "\n\\end_branch"
 		   << "\n";
 	}

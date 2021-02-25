@@ -233,8 +233,27 @@ void GuiPainter::arc(int x, int y, unsigned int w, unsigned int h,
 }
 
 
+void GuiPainter::ellipse(double x, double y, double rx, double ry,
+	Color col, fill_style fs, line_style ls, int lw)
+{
+	QColor const color = computeColor(col);
+	setQPainterPen(color, ls, lw);
+	bool const do_antialiasing = renderHints() & TextAntialiasing;
+	setRenderHint(Antialiasing, do_antialiasing);
+	if (fs == fill_none) {
+		drawEllipse(QPointF(x, y), rx, ry);
+	} else {
+		QBrush const oldbrush = brush();
+		setBrush(QBrush(color));
+		drawEllipse(QPointF(x, y), rx, ry);
+		setBrush(oldbrush);
+	}
+	setRenderHint(Antialiasing, false);
+}
+
+
 void GuiPainter::image(int x, int y, int w, int h, graphics::Image const & i,
-		       bool revert_in_darkmode)
+		       bool const revert_in_darkmode)
 {
 	graphics::GuiImage const & qlimage =
 		static_cast<graphics::GuiImage const &>(i);
@@ -242,30 +261,8 @@ void GuiPainter::image(int x, int y, int w, int h, graphics::Image const & i,
 	fillRectangle(x, y, w, h, Color_graphicsbg);
 
 	QImage image = qlimage.image();
-	
-	QPalette palette = QPalette();
-	QColor text_color = palette.color(QPalette::Active, QPalette::WindowText);
-	QColor bg_color = palette.color(QPalette::Active, QPalette::Window);
-	// guess whether we are in dark mode
-	bool const in_dark_mode = text_color.black() < bg_color.black();
-	// if we are in dark mode, check whether we have transparent pixels
-	if (in_dark_mode && !revert_in_darkmode) {
-		QImage img = image.convertToFormat(QImage::Format_ARGB32);
-		for (int x = 0 ; x < img.width() ; x++) {
-			if (revert_in_darkmode)
-				break;
-			for (int y = 0 ; y < img.height() ; y++) {
-				QRgb currentPixel = (img.pixel(x, y));
-				if (qAlpha(currentPixel) == 0) {
-					// we have transparent pixels, revert
-					// this image in dark mode (#12076)
-					revert_in_darkmode = true;
-					break;
-				}
-			}
-		}
-	}
-	if (in_dark_mode && revert_in_darkmode)
+
+	if (revert_in_darkmode && guiApp && guiApp->colorCache().isDarkMode())
 		// FIXME this is only a cheap approximation
 		// Ideally, replace colors as in GuiApplication::prepareForDarkmode()
 		image.invertPixels();
@@ -446,8 +443,8 @@ void GuiPainter::buttonText(int x, int baseline, docstring const & s,
 
 	int const d = offset / 2;
 
-	fillRectangle(x + d + 1, baseline - ascent + 1, width - offset - 1,
-			      ascent + descent - 1, back);
+	fillRectangle(x + d, baseline - ascent, width - offset,
+			      ascent + descent, back);
 	rectangle(x + d, baseline - ascent, width - offset, ascent + descent, frame);
 	text(x + offset, baseline, s, font);
 }

@@ -286,8 +286,16 @@ void makeBibliography(
 
 	// Generate the entry. Concatenate the different parts of the paragraph if any.
 	auto const begin = text.paragraphs().begin();
-	auto pars = par->simpleDocBookOnePar(buf, runparams, text.outerFont(std::distance(begin, par)), 0);
+	std::vector<docstring> pars_prepend;
+	std::vector<docstring> pars;
+	std::vector<docstring> pars_append;
+	tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buf, runparams, text.outerFont(std::distance(begin, par)), 0);
+
+	for (auto & parXML : pars_prepend)
+		xs << XMLStream::ESCAPE_NONE << parXML;
 	for (auto & parXML : pars)
+		xs << XMLStream::ESCAPE_NONE << parXML;
+	for (auto & parXML : pars_append)
 		xs << XMLStream::ESCAPE_NONE << parXML;
 
 	// End the precooked bibliography entry.
@@ -432,7 +440,14 @@ void makeParagraph(
 	// Open and close tags around each contained paragraph.
 	auto nextpar = par;
 	++nextpar;
-	auto pars = par->simpleDocBookOnePar(buf, runparams, text.outerFont(distance(begin, par)), 0, nextpar == end, special_case);
+
+	std::vector<docstring> pars_prepend;
+	std::vector<docstring> pars;
+	std::vector<docstring> pars_append;
+	tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buf, runparams, text.outerFont(distance(begin, par)), 0, nextpar == end, special_case);
+
+	for (docstring const & parXML : pars_prepend)
+	    xs << XMLStream::ESCAPE_NONE << parXML;
 	for (docstring const & parXML : pars) {
 		if (!xml::isNotOnlySpace(parXML))
 			continue;
@@ -445,6 +460,8 @@ void makeParagraph(
 		if (close_par)
 			closeParTag(xs, &*par, (nextpar != end) ? &*nextpar : nullptr, runparams);
 	}
+	for (docstring const & parXML : pars_append)
+	    xs << XMLStream::ESCAPE_NONE << parXML;
 }
 
 
@@ -480,8 +497,13 @@ void makeEnvironment(Text const &text,
 		// Nothing to do (otherwise, infinite loops).
 	} else if (style.latextype == LATEX_ENVIRONMENT) {
 		// Generate the paragraph, if need be.
-		auto pars = par->simpleDocBookOnePar(buf, runparams, text.outerFont(std::distance(text.paragraphs().begin(), par)), 0, false, ignoreFonts);
+		std::vector<docstring> pars_prepend;
+        std::vector<docstring> pars;
+        std::vector<docstring> pars_append;
+        tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buf, runparams, text.outerFont(std::distance(text.paragraphs().begin(), par)), 0, false, ignoreFonts);
 
+        for (docstring const & parXML : pars_prepend)
+            xs << XMLStream::ESCAPE_NONE << parXML;
 		if (mimicListing) {
 			auto p = pars.begin();
 			while (p != pars.end()) {
@@ -504,6 +526,8 @@ void makeEnvironment(Text const &text,
 				xml::closeTag(xs, par->layout().docbookiteminnertag(), par->layout().docbookiteminnertagtype());
 			}
 		}
+        for (docstring const & parXML : pars_append)
+            xs << XMLStream::ESCAPE_NONE << parXML;
 	} else {
 		makeAny(text, buf, xs, runparams, par);
 	}
@@ -604,14 +628,21 @@ ParagraphList::const_iterator makeListEnvironment(Text const &text,
 
 		// Generate the content of the item.
 		if (sep < par->size()) {
-			auto pars = par->simpleDocBookOnePar(buf, runparams,
+            std::vector<docstring> pars_prepend;
+            std::vector<docstring> pars;
+            std::vector<docstring> pars_append;
+            tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buf, runparams,
 			                                     text.outerFont(std::distance(text.paragraphs().begin(), par)), sep);
+            for (docstring const & parXML : pars_prepend)
+                xs << XMLStream::ESCAPE_NONE << parXML;
 			for (auto &p : pars) {
 				xml::openTag(xs, par->layout().docbookiteminnertag(), par->layout().docbookiteminnerattr(),
 				             par->layout().docbookiteminnertagtype());
 				xs << XMLStream::ESCAPE_NONE << p;
 				xml::closeTag(xs, par->layout().docbookiteminnertag(), par->layout().docbookiteminnertagtype());
 			}
+            for (docstring const & parXML : pars_append)
+                xs << XMLStream::ESCAPE_NONE << parXML;
 		} else {
 			// DocBook doesn't like emptiness.
 			xml::compTag(xs, par->layout().docbookiteminnertag(), par->layout().docbookiteminnerattr(),
@@ -656,14 +687,23 @@ void makeCommand(
 
 	// Generate this command.
 	auto prevpar = text.paragraphs().getParagraphBefore(par);
-	openParTag(xs, &*par, prevpar, runparams);
 
-	auto pars = par->simpleDocBookOnePar(buf, runparams,text.outerFont(distance(begin, par)));
+    std::vector<docstring> pars_prepend;
+    std::vector<docstring> pars;
+    std::vector<docstring> pars_append;
+    tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buf, runparams,text.outerFont(distance(begin, par)));
+
+    for (docstring const & parXML : pars_prepend)
+        xs << XMLStream::ESCAPE_NONE << parXML;
+
+    openParTag(xs, &*par, prevpar, runparams);
 	for (auto & parXML : pars)
 		// TODO: decide what to do with openParTag/closeParTag in new lines.
 		xs << XMLStream::ESCAPE_NONE << parXML;
+    closeParTag(xs, &*par, (nextpar != end) ? &*nextpar : nullptr, runparams);
 
-	closeParTag(xs, &*par, (nextpar != end) ? &*nextpar : nullptr, runparams);
+    for (docstring const & parXML : pars_append)
+        xs << XMLStream::ESCAPE_NONE << parXML;
 }
 
 
@@ -1101,6 +1141,63 @@ void docbookParagraphs(Text const &text,
 	DocBookInfoTag info = getParagraphsWithInfo(paragraphs, bpit, eppit, true, true);
 	outputDocBookInfo(text, buf, xs, runparams, paragraphs, info);
 	bpit = info.epit;
+
+	// In the specific case of books, there must be parts or chapters. In some cases, star sections are used at the
+	// beginning for many things like acknowledgements or licenses. DocBook has tags for many of these cases, but not
+	// the LyX layouts... Gather everything in a <preface>, that's the closest in meaning.
+	// This is only useful if the things after the <info> tag are not already parts or chapters!
+	if (buf.params().documentClass().docbookroot() == "book") {
+	    // Check the condition on the first few elements.
+	    bool hasPreface = false;
+	    pit_type pref_bpit = bpit;
+	    pit_type pref_epit = bpit;
+
+	    static const std::set<std::string> allowedElements = {
+	            // List from https://tdg.docbook.org/tdg/5.2/book.html
+	            "acknowledgements", "appendix", "article", "bibliography", "chapter", "colophon", "dedication",
+	            "glossary", "index", "part", "preface", "reference", "toc"
+	    };
+
+	    for (; pref_epit < epit; ++pref_epit) {
+            auto par = text.paragraphs().iterator_at(pref_epit);
+            if (allowedElements.find(par->layout().docbooktag()) != allowedElements.end() ||
+                    allowedElements.find(par->layout().docbooksectiontag()) != allowedElements.end())
+                break;
+
+            hasPreface = true;
+	    }
+
+	    // Output a preface if required. A title is needed for the document to be valid...
+	    if (hasPreface) {
+	        xs << xml::StartTag("preface");
+	        xs << xml::CR();
+
+	        xs << xml::StartTag("title");
+	        xs << "Preface";
+	        xs << xml::EndTag("title");
+            xs << xml::CR();
+
+            auto pref_par = text.paragraphs().iterator_at(pref_bpit);
+            auto pref_end = text.paragraphs().iterator_at(pref_epit);
+            while (pref_par != pref_end) {
+                // Skip paragraphs not producing any output.
+                if (hasOnlyNotes(*pref_par)) {
+                    ++pref_par;
+                    continue;
+                }
+
+                // TODO: must sections be handled here? If so, it might be useful to extract the corresponding loop
+                // in the rest of this function to use the same here (and avoid copy-paste mistakes).
+                pref_par = makeAny(text, buf, xs, runparams, pref_par);
+            }
+
+	        xs << xml::EndTag("preface");
+            xs << xml::CR();
+
+            // Skip what has just been generated in the preface.
+            bpit = pref_epit;
+	    }
+	}
 
 	std::stack<std::pair<int, string>> headerLevels; // Used to determine when to open/close sections: store the depth
 	// of the section and the tag that was used to open it.

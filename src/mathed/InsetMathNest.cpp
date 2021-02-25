@@ -539,7 +539,8 @@ void InsetMathNest::doDispatch(Cursor & cur, FuncRequest & cmd)
 			size_t n = 0;
 			idocstringstream is(cmd.argument());
 			is >> n;
-			topaste = cap::selection(n, buffer().params().documentClassPtr());
+			topaste = cap::selection(n, make_pair(buffer().params().documentClassPtr(),
+							      buffer().params().authors()));
 		}
 		cur.niceInsert(topaste, parseflg, false);
 		cur.clearSelection(); // bug 393
@@ -1819,7 +1820,13 @@ bool InsetMathNest::interpretChar(Cursor & cur, char_type const c)
 			// but suppress direct insertion of two spaces in a row
 			// the still allows typing  '<space>a<space>' and deleting the 'a', but
 			// it is better than nothing...
-			if (cur.pos() == 0 || cur.prevAtom()->getChar() != ' ') {
+			pos_type const pos = cur.pos();
+			pos_type const lastpos = cur.lastpos();
+			if ((pos == 0 && lastpos == 0)
+			    || (pos == 0 && cur.nextAtom()->getChar() != ' ')
+			    || (pos == lastpos && cur.prevAtom()->getChar() != ' ')
+			    || (pos > 0 && cur.prevAtom()->getChar() != ' '
+					&& cur.nextAtom()->getChar() != ' ')) {
 				cur.insert(c);
 				// FIXME: we have to enable full redraw here because of the
 				// visual box corners that define the inset. If we know for

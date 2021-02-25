@@ -129,6 +129,7 @@ enum LayoutTags {
 	LT_DOCBOOKITEMINNERATTR,
 	LT_DOCBOOKITEMINNERTAGTYPE,
 	LT_DOCBOOKFORCEABSTRACTTAG,
+	LT_DOCBOOKNOFONTINSIDE,
 	LT_INPREAMBLE,
 	LT_HTMLTITLE,
 	LT_SPELLCHECK,
@@ -252,6 +253,7 @@ bool Layout::readIgnoreForcelocal(Lexer & lex, TextClass const & tclass,
 		{ "docbookitemwrapperattr",    LT_DOCBOOKITEMWRAPPERATTR },
 		{ "docbookitemwrappertag",     LT_DOCBOOKITEMWRAPPERTAG },
 		{ "docbookitemwrappertagtype", LT_DOCBOOKITEMWRAPPERTAGTYPE },
+		{ "docbooknofontinside",       LT_DOCBOOKNOFONTINSIDE, },
 		{ "docbooksection",            LT_DOCBOOKSECTION },
 		{ "docbooksectiontag",         LT_DOCBOOKSECTIONTAG },
 		{ "docbooktag",                LT_DOCBOOKTAG },
@@ -805,11 +807,11 @@ bool Layout::readIgnoreForcelocal(Lexer & lex, TextClass const & tclass,
 			lex >> docbooksectiontag_;
 			break;
 
-        case LT_DOCBOOKITEMWRAPPERTAG:
-            lex >> docbookitemwrappertag_;
-            break;
-
-        case LT_DOCBOOKITEMWRAPPERATTR:
+		case LT_DOCBOOKITEMWRAPPERTAG:
+			lex >> docbookitemwrappertag_;
+			break;
+	
+		case LT_DOCBOOKITEMWRAPPERATTR:
 			lex >> docbookitemwrapperattr_;
 			break;
 
@@ -852,6 +854,10 @@ bool Layout::readIgnoreForcelocal(Lexer & lex, TextClass const & tclass,
 		case LT_DOCBOOKITEMINNERTAGTYPE:
 			lex >> docbookiteminnertagtype_;
 			break;
+
+        case LT_DOCBOOKNOFONTINSIDE:
+            lex >> docbooknofontinside_;
+            break;
 
 		case LT_SPELLCHECK:
 			lex >> spellcheck;
@@ -1278,6 +1284,12 @@ void Layout::readArgument(Lexer & lex, bool validating)
 		} else if (tok == "docbooktagtype") {
 			lex.next();
 			arg.docbooktagtype = lex.getDocString();
+		} else if (tok == "docbookargumentaftermaintag") {
+			lex.next();
+			arg.docbookargumentaftermaintag = lex.getBool();
+		} else if (tok == "docbookargumentbeforemaintag") {
+			lex.next();
+			arg.docbookargumentbeforemaintag = lex.getBool();
 		} else {
 			lex.printError("Unknown tag");
 			error = true;
@@ -1719,7 +1731,8 @@ void Layout::write(ostream & os) const
 		os << "\tDocBookItemInnerTagType " << docbookiteminnertagtype_ << '\n';
 	if(!docbookforceabstracttag_.empty())
 		os << "\tDocBookForceAbstractTag " << docbookforceabstracttag_ << '\n';
-	os << "\tSpellcheck " << spellcheck << "\n"
+    os << "\tDocBookNoFontInside " << docbooknofontinside_ << "\n"
+	      "\tSpellcheck " << spellcheck << "\n"
 	      "\tForceLocal " << forcelocal << "\n"
 	      "End\n";
 }

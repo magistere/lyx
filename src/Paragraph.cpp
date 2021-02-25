@@ -47,6 +47,7 @@
 
 #include "frontends/alert.h"
 
+#include "insets/InsetArgument.h"
 #include "insets/InsetBibitem.h"
 #include "insets/InsetLabel.h"
 #include "insets/InsetSpecialChar.h"
@@ -56,6 +57,7 @@
 
 #include "support/debug.h"
 #include "support/docstring_list.h"
+#include "support/ExceptionMessage.h"
 #include "support/gettext.h"
 #include "support/lassert.h"
 #include "support/lstrings.h"
@@ -564,6 +566,50 @@ Paragraph::Private::Private(Private const & p, Paragraph * owner,
 }
 
 
+/////////////////////////////////////////////////////////////////////
+//
+// Paragraph
+//
+/////////////////////////////////////////////////////////////////////
+
+namespace {
+
+/** This helper class should be instantiated at the start of methods
+ * that can create or merge changes. If as a result the value of
+ * Paragraph::isChanged is modified, it makes sure that updateBuffer()
+ * will be run.
+ */
+struct ChangesMonitor {
+	///
+	ChangesMonitor(Paragraph & par)
+		: par_(par), was_changed_(par.isChanged()) {}
+	///
+	~ChangesMonitor()
+	{
+		/* We may need to run updateBuffer to check whether the buffer
+		 * contains changes (and toggle the changes toolbar). We do it
+		 * when:
+		 * 1. the `changedness' of the paragraph has changed,
+		 * 2. and we are not in the situation where the buffer has changes
+		 * and new changes are added to the paragraph.
+		 */
+		try {
+			if (par_.isChanged() != was_changed_
+				&& par_.inInset().isBufferValid()
+				&& !(par_.inInset().buffer().areChangesPresent() && par_.isChanged()))
+				par_.inInset().buffer().forceUpdate();
+		} catch(support::ExceptionMessage const &) {}
+	}
+
+private:
+	///
+	Paragraph const & par_;
+	///
+	bool was_changed_;
+};
+
+}
+
 void Paragraph::addChangesToToc(DocIterator const & cdit, Buffer const & buf,
                                 bool output_active, TocBackend & backend) const
 {
@@ -629,6 +675,9 @@ Change Paragraph::parEndChange() const
 
 void Paragraph::setChange(Change const & change)
 {
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	// beware of the imaginary end-of-par character!
 	d->changes_.set(change, 0, size() + 1);
 
@@ -655,6 +704,9 @@ void Paragraph::setChange(Change const & change)
 
 void Paragraph::setChange(pos_type pos, Change const & change)
 {
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	LASSERT(pos >= 0 && pos <= size(), return);
 	d->changes_.set(change, pos);
 
@@ -674,6 +726,9 @@ Change const & Paragraph::lookupChange(pos_type pos) const
 
 void Paragraph::acceptChanges(pos_type start, pos_type end)
 {
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	LASSERT(start >= 0 && start <= size(), return);
 	LASSERT(end > start && end <= size() + 1, return);
 
@@ -712,6 +767,9 @@ void Paragraph::rejectChanges(pos_type start, pos_type end)
 	LASSERT(start >= 0 && start <= size(), return);
 	LASSERT(end > start && end <= size() + 1, return);
 
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	for (pos_type pos = start; pos < end; ++pos) {
 		switch (lookupChange(pos).type) {
 			case Change::UNCHANGED:
@@ -747,6 +805,9 @@ void Paragraph::Private::insertChar(pos_type pos, char_type c,
 {
 	LASSERT(pos >= 0 && pos <= int(text_.size()), return);
 
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*owner_);
+
 	// track change
 	changes_.insert(change, pos);
 
@@ -779,6 +840,9 @@ bool Paragraph::insertInset(pos_type pos, Inset * inset,
 	LASSERT(inset, return false);
 	LASSERT(pos >= 0 && pos <= size(), return false);
 
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	// Paragraph::insertInset() can be used in cut/copy/paste operation where
 	// d->inset_owner_ is not set yet.
 	if (d->inset_owner_ && !d->inset_owner_->insetAllowed(inset->lyxCode()))
@@ -800,6 +864,9 @@ bool Paragraph::insertInset(pos_type pos, Inset * inset,
 bool Paragraph::eraseChar(pos_type pos, bool trackChanges)
 {
 	LASSERT(pos >= 0 && pos <= size(), return false);
+
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
 
 	// keep the logic here in sync with the logic of isMergedOnEndOfParDeletion()
 
@@ -1129,16 +1196,16 @@ void Paragraph::Private::latexSpecialChar(otexstream & os,
 {
 	char_type const c = owner_->getUChar(bparams, runparams, i);
 
-	if (style.pass_thru || runparams.pass_thru || runparams.for_search
+	if (style.pass_thru || runparams.pass_thru || (runparams.for_searchAdv != OutputParams::NoSearch)
 	    || contains(style.pass_thru_chars, c)
 	    || contains(runparams.pass_thru_chars, c)) {
-		if (runparams.for_search) {
+		if (runparams.for_searchAdv != OutputParams::NoSearch) {
 			if (c == '\\')
 				os << "\\\\";
 			else if (c == '{')
-				os << "\\braceleft";
+				os << "\\braceleft ";
 			else if (c == '}')
-				os << "\\braceright";
+				os << "\\braceright ";
 			else if (c != '\0')
 				os.put(c);
 		}
@@ -1707,6 +1774,9 @@ void Paragraph::insert(pos_type pos, docstring const & str,
 void Paragraph::appendChar(char_type c, Font const & font,
 		Change const & change)
 {
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	// track change
 	d->changes_.insert(change, d->text_.size());
 	// when appending characters, no need to update tables
@@ -1719,6 +1789,9 @@ void Paragraph::appendChar(char_type c, Font const & font,
 void Paragraph::appendString(docstring const & s, Font const & font,
 		Change const & change)
 {
+	// Make sure that Buffer::hasChangesPresent is updated
+	ChangesMonitor cm(*this);
+
 	pos_type end = s.size();
 	size_t oldsize = d->text_.size();
 	size_t newsize = oldsize + end;
@@ -2443,7 +2516,9 @@ void Paragraph::latex(BufferParams const & bparams,
 	// Do we have an open font change?
 	bool open_font = false;
 
-	Change runningChange = Change(Change::UNCHANGED);
+	Change runningChange =
+	    runparams.inDeletedInset && !inInset().canTrackChanges()
+	    ? runparams.changeOfDeletedInset : Change(Change::UNCHANGED);
 
 	Encoding const * const prev_encoding = runparams.encoding;
 
@@ -2488,7 +2563,7 @@ void Paragraph::latex(BufferParams const & bparams,
 						runparams);
 				runningChange = Change(Change::UNCHANGED);
 
-				os << "}] ";
+				os << (isEnvSeparator(i) ? "}]~" : "}] ");
 				column +=3;
 			}
 			// For InTitle commands, we have already opened a group
@@ -2517,6 +2592,11 @@ void Paragraph::latex(BufferParams const & bparams,
 		char_type const c = d->text_[i];
 
 		// Check whether a display math inset follows
+		bool output_changes;
+		if (runparams.for_searchAdv == OutputParams::NoSearch)
+			output_changes = bparams.output_changes;
+		else
+			output_changes = (runparams.for_searchAdv == OutputParams::SearchWithDeleted);
 		if (c == META_INSET
 		    && i >= start_pos && (end_pos == -1 || i < end_pos)) {
 			if (isDeleted(i))
@@ -2532,7 +2612,7 @@ void Paragraph::latex(BufferParams const & bparams,
 				// cannot set it here because it is a counter.
 				deleted_display_math = isDeleted(i);
 			}
-			if (bparams.output_changes && deleted_display_math
+			if (output_changes && deleted_display_math
 			    && runningChange == change
 			    && change.type == Change::DELETED
 			    && !os.afterParbreak()) {
@@ -2555,7 +2635,7 @@ void Paragraph::latex(BufferParams const & bparams,
 			}
 		}
 
-		if (bparams.output_changes && runningChange != change) {
+		if (output_changes && runningChange != change) {
 			if (!alien_script.empty()) {
 				column += 1;
 				os << "}";
@@ -2578,7 +2658,7 @@ void Paragraph::latex(BufferParams const & bparams,
 
 		// do not output text which is marked deleted
 		// if change tracking output is disabled
-		if (!bparams.output_changes && change.deleted()) {
+		if (!output_changes && change.deleted()) {
 			continue;
 		}
 
@@ -2592,7 +2672,7 @@ void Paragraph::latex(BufferParams const & bparams,
 				      : current_font;
 
 		Font const last_font = running_font;
-		bool const in_ct_deletion = (bparams.output_changes
+		bool const in_ct_deletion = (output_changes
 					     && runningChange == change
 					     && change.type == Change::DELETED
 					     && !os.afterParbreak());
@@ -2973,8 +3053,9 @@ void Paragraph::latex(BufferParams const & bparams,
 		os << "{\\" << font.latexSize() << "\\par}";
 	}
 
-	column += Changes::latexMarkChange(os, bparams, runningChange,
-					   Change(Change::UNCHANGED), runparams);
+	if (!runparams.inDeletedInset || inInset().canTrackChanges())
+		column += Changes::latexMarkChange(os, bparams, runningChange,
+					Change(Change::UNCHANGED), runparams);
 
 	// Needed if there is an optional argument but no contents.
 	if (body_pos > 0 && body_pos == size()) {
@@ -3339,38 +3420,62 @@ std::tuple<vector<xml::FontTag>, vector<xml::EndFontTag>> computeDocBookFontSwit
 } // anonymous namespace
 
 
-std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
+std::tuple<std::vector<docstring>, std::vector<docstring>, std::vector<docstring>>
+    Paragraph::simpleDocBookOnePar(Buffer const & buf,
                                                       OutputParams const & runparams,
                                                       Font const & outerfont,
                                                       pos_type initial,
                                                       bool is_last_par,
                                                       bool ignore_fonts) const
 {
-	// Track whether we have opened these tags
-	DocBookFontState fs;
-
-	Layout const & style = *d->layout_;
-	FontInfo font_old =
-			style.labeltype == LABEL_MANUAL ? style.labelfont : style.font;
-
-	string const default_family =
-			buf.masterBuffer()->params().fonts_default_family;
-
-	vector<xml::FontTag> tagsToOpen;
-	vector<xml::EndFontTag> tagsToClose;
-
+	std::vector<docstring> prependedParagraphs;
 	std::vector<docstring> generatedParagraphs;
-	DocBookFontState old_fs = fs;
+	std::vector<docstring> appendedParagraphs;
 	odocstringstream os;
-	auto * xs = new XMLStream(os); // XMLStream has no copy constructor: to create a new object, the only solution
-	// is to hold a pointer to the XMLStream (xs = XMLStream(os) is not allowed once the first object is built).
 
-	// When a font tag ends with a space, output it after the closing font tag. This requires to store delayed
-	// characters at some point.
-	std::vector<char_type> delayedChars;
+	// If there is an argument that must be output before the main tag, do it before handling the rest of the paragraph.
+	// Also tag all arguments that shouldn't go in the main content right now, so that they are never generated at the
+	// wrong place.
+	OutputParams rp = runparams;
+    for (pos_type i = initial; i < size(); ++i) {
+        if (getInset(i) && getInset(i)->lyxCode() == ARG_CODE) {
+            const InsetArgument * arg = getInset(i)->asInsetArgument();
+            if (arg->docbookargumentbeforemaintag()) {
+                auto xs_local = XMLStream(os);
+                arg->docbook(xs_local, rp);
+
+                prependedParagraphs.push_back(os.str());
+                os.str(from_ascii(""));
+
+                rp.docbook_prepended_arguments.insert(arg);
+            } else if (arg->docbookargumentaftermaintag()) {
+                rp.docbook_appended_arguments.insert(arg);
+            }
+        }
+    }
+
+    // State variables for the main loop.
+    auto xs = new XMLStream(os); // XMLStream has no copy constructor: to create a new object, the only solution
+    // is to hold a pointer to the XMLStream (xs = XMLStream(os) is not allowed once the first object is built).
+    std::vector<char_type> delayedChars; // When a font tag ends with a space, output it after the closing font tag.
+    // This requires to store delayed characters at some point.
+
+    DocBookFontState fs; // Track whether we have opened font tags
+    DocBookFontState old_fs = fs;
+
+    Layout const & style = *d->layout_;
+    FontInfo font_old = style.labeltype == LABEL_MANUAL ? style.labelfont : style.font;
+    string const default_family = buf.masterBuffer()->params().fonts_default_family;
+
+    vector<xml::FontTag> tagsToOpen;
+    vector<xml::EndFontTag> tagsToClose;
 
 	// Parsing main loop.
 	for (pos_type i = initial; i < size(); ++i) {
+	    bool ignore_fonts_i = ignore_fonts
+                              || style.docbooknofontinside()
+                              || (getInset(i) && getInset(i)->getLayout().docbooknofontinside());
+
 		// Don't show deleted material in the output.
 		if (isDeleted(i))
 			continue;
@@ -3378,7 +3483,7 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 		// If this is an InsetNewline, generate a new paragraph. Also reset the fonts, so that tags are closed in
 		// this paragraph.
 		if (getInset(i) && getInset(i)->lyxCode() == NEWLINE_CODE) {
-			if (!ignore_fonts)
+			if (!ignore_fonts_i)
 				xs->closeFontTags();
 
 			// Output one paragraph (i.e. one string entry in generatedParagraphs).
@@ -3391,7 +3496,7 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 			xs = new XMLStream(os);
 
 			// Restore the fonts for the new paragraph, so that the right tags are opened for the new entry.
-			if (!ignore_fonts) {
+			if (!ignore_fonts_i) {
 				font_old = outerfont.fontInfo();
 				fs = old_fs;
 			}
@@ -3399,24 +3504,23 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 
 		// Determine which tags should be opened or closed regarding fonts.
 		Font const font = getFont(buf.masterBuffer()->params(), i, outerfont);
-		if (!ignore_fonts) {
-			tie(tagsToOpen, tagsToClose) = computeDocBookFontSwitch(font_old, font, default_family, fs);
+        tie(tagsToOpen, tagsToClose) = computeDocBookFontSwitch(font_old, font, default_family, fs);
 
-			// FIXME XHTML
-			// Other such tags? What about the other text ranges?
+		if (!ignore_fonts_i) {
+            vector<xml::EndFontTag>::const_iterator cit = tagsToClose.begin();
+            vector<xml::EndFontTag>::const_iterator cen = tagsToClose.end();
+            for (; cit != cen; ++cit)
+                *xs << *cit;
+        }
 
-			vector<xml::EndFontTag>::const_iterator cit = tagsToClose.begin();
-			vector<xml::EndFontTag>::const_iterator cen = tagsToClose.end();
-			for (; cit != cen; ++cit)
-				*xs << *cit;
+        // Deal with the delayed characters *after* closing font tags.
+        if (!delayedChars.empty()) {
+            for (char_type c: delayedChars)
+                *xs << c;
+            delayedChars.clear();
+        }
 
-			// Deal with the delayed characters *after* closing font tags.
-			if (!delayedChars.empty()) {
-				for (char_type c: delayedChars)
-					*xs << c;
-				delayedChars.clear();
-			}
-
+        if (!ignore_fonts_i) {
 			vector<xml::FontTag>::const_iterator sit = tagsToOpen.begin();
 			vector<xml::FontTag>::const_iterator sen = tagsToOpen.end();
 			for (; sit != sen; ++sit)
@@ -3426,9 +3530,15 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 			tagsToOpen.clear();
 		}
 
+        // Finally, write the next character or inset.
 		if (Inset const * inset = getInset(i)) {
-			if (!runparams.for_toc || inset->isInToc()) {
-				OutputParams np = runparams;
+		    bool inset_is_argument_elsewhere = getInset(i)->asInsetArgument() &&
+		            rp.docbook_appended_arguments.find(inset->asInsetArgument()) != rp.docbook_appended_arguments.end() &&
+		            rp.docbook_prepended_arguments.find(inset->asInsetArgument()) != rp.docbook_prepended_arguments.end();
+
+			if ((!rp.for_toc || inset->isInToc()) && !inset_is_argument_elsewhere) {
+			    // Arguments may need to be output
+				OutputParams np = rp;
 				np.local_font = &font;
 
 				// TODO: special case will bite here.
@@ -3436,7 +3546,7 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 				inset->docbook(*xs, np);
 			}
 		} else {
-			char_type c = getUChar(buf.masterBuffer()->params(), runparams, i);
+			char_type c = getUChar(buf.masterBuffer()->params(), rp, i);
 			if (lyx::isSpace(c) && !ignore_fonts)
 				delayedChars.push_back(c);
 			else
@@ -3458,14 +3568,30 @@ std::vector<docstring> Paragraph::simpleDocBookOnePar(Buffer const & buf,
 
 	// In listings, new lines (i.e. \n characters in the output) are very important. Avoid generating one for the
 	// last line to get a clean output.
-	if (runparams.docbook_in_listing && !is_last_par)
+	if (rp.docbook_in_listing && !is_last_par)
 		*xs << xml::CR();
 
 	// Finalise the last (and most likely only) paragraph.
 	generatedParagraphs.push_back(os.str());
-	delete xs;
+    os.str(from_ascii(""));
+    delete xs;
 
-	return generatedParagraphs;
+    // If there is an argument that must be output after the main tag, do it after handling the rest of the paragraph.
+    for (pos_type i = initial; i < size(); ++i) {
+        if (getInset(i) && getInset(i)->lyxCode() == ARG_CODE) {
+            const InsetArgument * arg = getInset(i)->asInsetArgument();
+            if (arg->docbookargumentaftermaintag()) {
+                // Don't use rp, as this argument would not generate anything.
+                auto xs_local = XMLStream(os);
+                arg->docbook(xs_local, runparams);
+
+                appendedParagraphs.push_back(os.str());
+                os.str(from_ascii(""));
+            }
+        }
+    }
+
+	return std::make_tuple(prependedParagraphs, generatedParagraphs, appendedParagraphs);
 }
 
 
@@ -4067,6 +4193,14 @@ docstring Paragraph::asString(pos_type beg, pos_type end, int options, const Out
 			if (c == META_INSET && (options & AS_STR_PLAINTEXT)) {
 				LASSERT(runparams != nullptr, return docstring());
 				getInset(i)->plaintext(os, *runparams);
+			} else if (c == META_INSET && (options & AS_STR_MATHED)
+				   && getInset(i)->lyxCode() == REF_CODE) {
+				Buffer const & buf = getInset(i)->buffer();
+				OutputParams rp(&buf.params().encoding());
+				Font const font(inherit_font, buf.params().language);
+				rp.local_font = &font;
+				otexstream ots(os);
+				getInset(i)->latex(ots, rp);
 			} else {
 				getInset(i)->toString(os);
 			}
@@ -4413,10 +4547,12 @@ int Paragraph::find(docstring const & str, bool cs, bool mw,
 				break;
 			odocstringstream os;
 			inset->toString(os);
-			if (!os.str().empty()) {
-				int const insetstringsize = os.str().length();
+			docstring const insetstring = os.str();
+			if (!insetstring.empty()) {
+				int const insetstringsize = insetstring.length();
 				for (int j = 0; j < insetstringsize && pos < parsize; ++i, ++j) {
-					if (str[i] != os.str()[j]) {
+					if ((cs && str[i] != insetstring[j])
+					    || (!cs && uppercase(str[i]) != uppercase(insetstring[j]))) {
 						nonmatch = true;
 						break;
 					}

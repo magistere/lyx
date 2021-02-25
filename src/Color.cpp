@@ -153,6 +153,16 @@ RGBColor const RGBColorFromLaTeX(string const & color)
 }
 
 
+RGBColor const inverseRGBColor(RGBColor color)
+{
+	color.r = 255 - color.r;
+	color.g = 255 - color.g;
+	color.b = 255 - color.b;
+
+	return color;
+}
+
+
 Color::Color(ColorCode base_color) : baseColor(base_color),
 	mergeColor(Color_ignore)
 {}
@@ -445,6 +455,64 @@ bool ColorSet::setColor(string const & lyxname, string const & x11hexname,
 	}
 
 	return setColor(lyxcolors[lcname], x11hexname, x11darkhexname);
+}
+
+
+bool ColorSet::setLaTeXName(string const & lyxname, string const & latexname)
+{
+	string const lcname = ascii_lowercase(lyxname);
+	if (lyxcolors.find(lcname) == lyxcolors.end()) {
+		LYXERR(Debug::GUI, "ColorSet::setLaTeXName: Unknown color \""
+		       << lyxname << '"');
+		addColor(static_cast<ColorCode>(infotab.size()), lcname);
+	}
+
+	ColorCode col = lyxcolors[lcname];
+	InfoTab::iterator it = infotab.find(col);
+	if (it == infotab.end()) {
+		LYXERR0("Color " << col << " not found in database.");
+		return false;
+	}
+
+	// "inherit" is returned for colors not in the database
+	// (and anyway should not be redefined)
+	if (col == Color_none || col == Color_inherit || col == Color_ignore) {
+		LYXERR0("Color " << getLyXName(col) << " may not be redefined.");
+		return false;
+	}
+
+	if (!latexname.empty())
+		it->second.latexname = latexname;
+	return true;
+}
+
+
+bool ColorSet::setGUIName(string const & lyxname, string const & guiname)
+{
+	string const lcname = ascii_lowercase(lyxname);
+	if (lyxcolors.find(lcname) == lyxcolors.end()) {
+		LYXERR(Debug::GUI, "ColorSet::setGUIName: Unknown color \""
+		       << lyxname << '"');
+		return false;
+	}
+
+	ColorCode col = lyxcolors[lcname];
+	InfoTab::iterator it = infotab.find(col);
+	if (it == infotab.end()) {
+		LYXERR0("Color " << col << " not found in database.");
+		return false;
+	}
+
+	// "inherit" is returned for colors not in the database
+	// (and anyway should not be redefined)
+	if (col == Color_none || col == Color_inherit || col == Color_ignore) {
+		LYXERR0("Color " << getLyXName(col) << " may not be redefined.");
+		return false;
+	}
+
+	if (!guiname.empty())
+		it->second.guiname = guiname;
+	return true;
 }
 
 

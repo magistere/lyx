@@ -26,14 +26,13 @@ from datetime import (datetime, date, time)
 
 # Uncomment only what you need to import, please.
 
-from parser_tools import (count_pars_in_inset, del_token, find_end_of_inset,
-    find_end_of_layout, find_token, find_token_backwards, find_token_exact,
-    find_re, get_bool_value,
+from parser_tools import (count_pars_in_inset, del_complete_lines, del_token,
+    find_end_of_inset, find_end_of_layout, find_token, find_token_backwards,
+    find_token_exact, find_re, get_bool_value, get_containing_inset,
     get_containing_layout, get_option_value, get_value, get_quoted_value)
-#    del_value, del_complete_lines,
+#    del_value, 
 #    find_complete_lines, find_end_of,
 #    find_re, find_substring,
-#    get_containing_inset,
 #    is_in_inset, set_bool_value
 #    find_tokens, check_token
 
@@ -4025,7 +4024,377 @@ def revert_math_refs(document):
             if "\\labelonly" in document.body[i]:
                 document.body[i] = re.sub("\\\\labelonly{([^}]+?)}", "\\1", document.body[i])
             i += 1
-        
+
+
+def convert_branch_colors(document):
+    " Convert branch colors to semantic values "
+
+    i = 0
+    while True:
+        i = find_token(document.header, "\\branch", i)
+        if i == -1:
+            break
+        j = find_token(document.header, "\\end_branch", i)
+        if j == -1:
+           document.warning("Malformed LyX document. Can't find end of branch definition!")
+           break
+        # We only support the standard LyX background for now
+        k = find_token(document.header, "\\color #faf0e6", i, j)
+        if k != -1:
+           document.header[k] = "\\color background"
+        i += 1
+
+
+def revert_branch_colors(document):
+    " Revert semantic branch colors "
+
+    i = 0
+    while True:
+        i = find_token(document.header, "\\branch", i)
+        if i == -1:
+            break
+        j = find_token(document.header, "\\end_branch", i)
+        if j == -1:
+           document.warning("Malformed LyX document. Can't find end of branch definition!")
+           break
+        k = find_token(document.header, "\\color", i, j)
+        if k != -1:
+           bcolor = get_value(document.header, "\\color", k)
+           if bcolor[1] != "#":
+               # this will be read as background by LyX 2.3
+               document.header[k] = "\\color none"
+        i += 1
+
+
+def revert_darkmode_graphics(document):
+    " Revert darkModeSensitive InsetGraphics param "
+
+    i = 0
+    while (True):
+        i = find_token(document.body, "\\begin_inset Graphics", i)
+        if i == -1:
+            break
+        j = find_end_of_inset(document.body, i)
+        if j == -1:
+            document.warning("Can't find end of graphics inset at line %d!!" %(i))
+            i += 1
+            continue
+        k = find_token(document.body, "\tdarkModeSensitive", i, j)
+        if k != -1:
+            del document.body[k]
+        i += 1
+
+
+def revert_branch_darkcols(document):
+    " Revert dark branch colors "
+
+    i = 0
+    while True:
+        i = find_token(document.header, "\\branch", i)
+        if i == -1:
+            break
+        j = find_token(document.header, "\\end_branch", i)
+        if j == -1:
+           document.warning("Malformed LyX document. Can't find end of branch definition!")
+           break
+        k = find_token(document.header, "\\color", i, j)
+        if k != -1:
+            m = re.search('\\\\color (\S+) (\S+)', document.header[k])
+            if m:
+                document.header[k] = "\\color " + m.group(1)
+        i += 1
+
+
+def revert_vcolumns2(document):
+    """Revert varwidth columns with line breaks etc."""
+    i = 0
+    needvarwidth = False
+    needarray = False
+    needcellvarwidth = False
+    try:
+        while True:
+            i = find_token(document.body, "\\begin_inset Tabular", i+1)
+            if i == -1:
+                return
+            j = find_end_of_inset(document.body, i)
+            if j == -1:
+                document.warning("Malformed LyX document: Could not find end of tabular.")
+                continue
+
+            # Collect necessary column information
+            m = i + 1
+            nrows = int(document.body[i+1].split('"')[3])
+            ncols = int(document.body[i+1].split('"')[5])
+            col_info = []
+            for k in range(ncols):
+                m = find_token(document.body, "<column", m)
+                width = get_option_value(document.body[m], 'width')
+                varwidth = get_option_value(document.body[m], 'varwidth')
+                alignment = get_option_value(document.body[m], 'alignment')
+                valignment = get_option_value(document.body[m], 'valignment')
+                special = get_option_value(document.body[m], 'special')
+                col_info.append([width, varwidth, alignment, valignment, special, m])
+                m += 1
+
+            # Now parse cells
+            m = i + 1
+            lines = []
+            for row in range(nrows):
+                for col in range(ncols):
+                    m = find_token(document.body, "<cell", m)
+                    multicolumn = get_option_value(document.body[m], 'multicolumn') != ""
+                    multirow = get_option_value(document.body[m], 'multirow') != ""
+                    fixedwidth = get_option_value(document.body[m], 'width') != ""
+                    rotate = get_option_value(document.body[m], 'rotate')
+                    cellalign = get_option_value(document.body[m], 'alignment')
+                    cellvalign = get_option_value(document.body[m], 'valignment')
+                    # Check for: linebreaks, multipars, non-standard environments
+                    begcell = m
+                    endcell = find_token(document.body, "</cell>", begcell)
+                    vcand = False
+                    if find_token(document.body, "\\begin_inset Newline", begcell, endcell) != -1:
+                        vcand = not fixedwidth
+                    elif count_pars_in_inset(document.body, begcell + 2) > 1:
+                        vcand = not fixedwidth
+                    elif get_value(document.body, "\\begin_layout", begcell) != "Plain Layout":
+                        vcand = not fixedwidth
+                    colalignment = col_info[col][2]
+                    colvalignment = col_info[col][3]
+                    if vcand:
+                        if rotate == "" and ((colalignment == "left" and colvalignment == "top") or (multicolumn == True and cellalign == "left" and cellvalign == "top")):
+                            if col_info[col][0] == "" and col_info[col][1] == "" and col_info[col][4] == "":
+                                needvarwidth = True
+                                col_line = col_info[col][5]
+                                needarray = True
+                                vval = "V{\\linewidth}"
+                                if multicolumn:
+                                    document.body[m] = document.body[m][:-1] + " special=\"" + vval + "\">"
+                                else:
+                                    document.body[col_line] = document.body[col_line][:-1] + " special=\"" + vval + "\">"
+                        else:
+                            alarg = ""
+                            if multicolumn or multirow:
+                                if cellvalign == "middle":
+                                    alarg = "[m]"
+                                elif cellvalign == "bottom":
+                                    alarg = "[b]"
+                            else:
+                                if colvalignment == "middle":
+                                    alarg = "[m]"
+                                elif colvalignment == "bottom":
+                                    alarg = "[b]"
+                            flt = find_token(document.body, "\\begin_layout", begcell, endcell)
+                            elt = find_token_backwards(document.body, "\\end_layout", endcell)
+                            if flt != -1 and elt != -1:
+                                extralines = []
+                                # we need to reset character layouts if necessary
+                                el = find_token(document.body, '\\emph on', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\emph default")
+                                el = find_token(document.body, '\\noun on', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\noun default")
+                                el = find_token(document.body, '\\series', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\series default")
+                                el = find_token(document.body, '\\family', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\family default")
+                                el = find_token(document.body, '\\shape', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\shape default")
+                                el = find_token(document.body, '\\color', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\color inherit")
+                                el = find_token(document.body, '\\size', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\size default")
+                                el = find_token(document.body, '\\bar under', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\bar default")
+                                el = find_token(document.body, '\\uuline on', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\uuline default")
+                                el = find_token(document.body, '\\uwave on', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\uwave default")
+                                el = find_token(document.body, '\\strikeout on', flt, elt)
+                                if el != -1:
+                                    extralines.append("\\strikeout default")
+                                document.body[elt:elt+1] = extralines + put_cmd_in_ert("\\end{cellvarwidth}") + ["\end_layout"]
+                                parlang = -1
+                                for q in range(flt, elt):
+                                    if document.body[q] != "" and document.body[q][0] != "\\":
+                                        break
+                                    if document.body[q][:5] == "\\lang":
+                                        parlang = q
+                                        break
+                                if parlang != -1:
+                                    document.body[parlang+1:parlang+1] = put_cmd_in_ert("\\begin{cellvarwidth}" + alarg)
+                                else:
+                                    document.body[flt+1:flt+1] = put_cmd_in_ert("\\begin{cellvarwidth}" + alarg)
+                                needcellvarwidth = True
+                                needvarwidth = True
+                        # ERT newlines and linebreaks (since LyX < 2.4 automatically inserts parboxes
+                        # with newlines, and we do not want that)
+                        while True:
+                            endcell = find_token(document.body, "</cell>", begcell)
+                            linebreak = False
+                            nl = find_token(document.body, "\\begin_inset Newline newline", begcell, endcell)
+                            if nl == -1:
+                                nl = find_token(document.body, "\\begin_inset Newline linebreak", begcell, endcell)
+                                if nl == -1:
+                                     break
+                                linebreak = True
+                            nle = find_end_of_inset(document.body, nl)
+                            del(document.body[nle:nle+1])
+                            if linebreak:
+                                document.body[nl:nl+1] = put_cmd_in_ert("\\linebreak{}")
+                            else:
+                                document.body[nl:nl+1] = put_cmd_in_ert("\\\\")
+                        # Replace parbreaks in multirow with \\endgraf
+                        if multirow == True:
+                            flt = find_token(document.body, "\\begin_layout", begcell, endcell)
+                            if flt != -1:
+                                while True:
+                                    elt = find_end_of_layout(document.body, flt)
+                                    if elt == -1:
+                                        document.warning("Malformed LyX document! Missing layout end.")
+                                        break
+                                    endcell = find_token(document.body, "</cell>", begcell)
+                                    flt = find_token(document.body, "\\begin_layout", elt, endcell)
+                                    if flt == -1:
+                                        break
+                                    document.body[elt : flt + 1] = put_cmd_in_ert("\\endgraf{}")
+                    m += 1
+
+            i = j
+
+    finally:
+        if needarray == True:
+            add_to_preamble(document, ["\\usepackage{array}"])
+        if needcellvarwidth == True:
+            add_to_preamble(document, ["%% Variable width box for table cells",
+                                       "\\newenvironment{cellvarwidth}[1][t]",
+                                       "    {\\begin{varwidth}[#1]{\\linewidth}}",
+                                       "    {\\@finalstrut\\@arstrutbox\\end{varwidth}}"])
+        if needvarwidth == True:
+            add_to_preamble(document, ["\\usepackage{varwidth}"])
+
+
+def convert_vcolumns2(document):
+    """Convert varwidth ERT to native"""
+    i = 0
+    try:
+        while True:
+            i = find_token(document.body, "\\begin_inset Tabular", i+1)
+            if i == -1:
+                return
+            j = find_end_of_inset(document.body, i)
+            if j == -1:
+                document.warning("Malformed LyX document: Could not find end of tabular.")
+                continue
+
+            # Parse cells
+            nrows = int(document.body[i+1].split('"')[3])
+            ncols = int(document.body[i+1].split('"')[5])
+            m = i + 1
+            lines = []
+            for row in range(nrows):
+                for col in range(ncols):
+                    m = find_token(document.body, "<cell", m)
+                    multirow = get_option_value(document.body[m], 'multirow') != ""
+                    begcell = m
+                    endcell = find_token(document.body, "</cell>", begcell)
+                    vcand = False
+                    cvw = find_token(document.body, "begin{cellvarwidth}", begcell, endcell)
+                    if cvw != -1:
+                        vcand = document.body[cvw - 1] == "\\backslash" and get_containing_inset(document.body, cvw)[0] == "ERT"
+                    if vcand:
+                        # Remove ERTs with cellvarwidth env
+                        ecvw = find_token(document.body, "end{cellvarwidth}", begcell, endcell)
+                        if ecvw != -1:
+                            if document.body[ecvw - 1] == "\\backslash":
+                                eertins = get_containing_inset(document.body, ecvw)
+                                if eertins and eertins[0] == "ERT":
+                                    del document.body[eertins[1] : eertins[2] + 1]
+                             
+                        cvw = find_token(document.body, "begin{cellvarwidth}", begcell, endcell)   
+                        ertins = get_containing_inset(document.body, cvw)
+                        if ertins and ertins[0] == "ERT":
+                            del(document.body[ertins[1] : ertins[2] + 1])
+                        
+                        # Convert ERT newlines (as cellvarwidth detection relies on that)
+                        while True:
+                            endcell = find_token(document.body, "</cell>", begcell)
+                            nl = find_token(document.body, "\\backslash", begcell, endcell)
+                            if nl == -1 or document.body[nl + 2] != "\\backslash":
+                                break
+                            ertins = get_containing_inset(document.body, nl)
+                            if ertins and ertins[0] == "ERT":
+                                document.body[ertins[1] : ertins[2] + 1] = ["\\begin_inset Newline newline", "", "\\end_inset"]
+
+                        # Same for linebreaks
+                        while True:
+                            endcell = find_token(document.body, "</cell>", begcell)
+                            nl = find_token(document.body, "linebreak", begcell, endcell)
+                            if nl == -1 or document.body[nl - 1] != "\\backslash":
+                                break
+                            ertins = get_containing_inset(document.body, nl)
+                            if ertins and ertins[0] == "ERT":
+                                document.body[ertins[1] : ertins[2] + 1] = ["\\begin_inset Newline linebreak", "", "\\end_inset"]
+
+                        # And \\endgraf
+                        if multirow == True:
+                            endcell = find_token(document.body, "</cell>", begcell)
+                            nl = find_token(document.body, "endgraf{}", begcell, endcell)
+                            if nl == -1 or document.body[nl - 1] != "\\backslash":
+                                break
+                            ertins = get_containing_inset(document.body, nl)
+                            if ertins and ertins[0] == "ERT":
+                                    document.body[ertins[1] : ertins[2] + 1] = ["\\end_layout", "", "\\begin_layout Plain Layout"]
+                    m += 1
+
+            i += 1
+
+    finally:
+        del_complete_lines(document.preamble,
+                                ['% Added by lyx2lyx',
+                                 '%% Variable width box for table cells',
+                                 r'\newenvironment{cellvarwidth}[1][t]',
+                                 r'    {\begin{varwidth}[#1]{\linewidth}}',
+                                 r'    {\@finalstrut\@arstrutbox\end{varwidth}}'])
+        del_complete_lines(document.preamble,
+                                ['% Added by lyx2lyx',
+                                 r'\usepackage{varwidth}'])
+
+
+frontispiece_def = [
+    r'### Inserted by lyx2lyx (frontispiece layout) ###',
+    r'Style Frontispiece',
+    r'  CopyStyle             Titlehead',
+    r'  LatexName             frontispiece',
+    r'End',
+]
+
+
+def convert_koma_frontispiece(document):
+    """Remove local KOMA frontispiece definition"""
+    if document.textclass[:3] != "scr":
+        return
+
+    if document.del_local_layout(frontispiece_def):
+        document.add_module("ruby")
+
+
+def revert_koma_frontispiece(document):
+    """Add local KOMA frontispiece definition"""
+    if document.textclass[:3] != "scr":
+        return
+
+    if find_token(document.body, "\\begin_layout Frontispiece", 0) != -1:
+        document.append_local_layout(frontispiece_def)
+
 
 ##
 # Conversion hub
@@ -4089,10 +4458,21 @@ convert = [
            [598, []],
            [599, []],
            [600, []],
-           [601, [convert_math_refs]]
+           [601, [convert_math_refs]],
+           [602, [convert_branch_colors]],
+           [603, []],
+           [604, []],
+           [605, [convert_vcolumns2]],
+           [606, [convert_koma_frontispiece]]
           ]
 
-revert =  [[599, [revert_math_refs]],
+revert =  [[605, [revert_koma_frontispiece]],
+           [604, [revert_vcolumns2]],
+           [603, [revert_branch_darkcols]],
+           [602, [revert_darkmode_graphics]],
+           [601, [revert_branch_colors]],
+           [600, []],
+           [599, [revert_math_refs]],
            [598, [revert_hrquotes]],
            [598, [revert_nopagebreak]],
            [597, [revert_docbook_table_output]],

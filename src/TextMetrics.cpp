@@ -582,26 +582,28 @@ bool TextMetrics::redoParagraph(pit_type const pit, bool const align_rows)
 	}
 
 	// The space above and below the paragraph.
-	int const top = parTopSpacing(pit);
-	pm.rows().front().dim().asc += top;
-	int const bottom = parBottomSpacing(pit);
-	pm.rows().back().dim().des += bottom;
-	pm.dim().des += top + bottom;
-
-	pm.dim().asc += pm.rows()[0].ascent();
-	pm.dim().des -= pm.rows()[0].ascent();
+	int top = parTopSpacing(pit);
+	int bottom = parBottomSpacing(pit);
 
 	// Top and bottom margin of the document (only at top-level)
 	// FIXME: It might be better to move this in another method
 	// specially tailored for the main text.
 	if (text_->isMainText()) {
 		if (pit == 0)
-			pm.dim().asc += bv_->topMargin();
-		ParagraphList const & pars = text_->paragraphs();
-		if (pit + 1 == pit_type(pars.size())) {
-			pm.dim().des += bv_->bottomMargin();
+			top += bv_->topMargin();
+		if (pit + 1 == pit_type(text_->paragraphs().size())) {
+			bottom += bv_->bottomMargin();
 		}
 	}
+
+	// Add the top/bottom space to rows and paragraph metrics
+	pm.rows().front().dim().asc += top;
+	pm.rows().back().dim().des += bottom;
+	pm.dim().des += top + bottom;
+
+	// Move the pm ascent to be the same as the first row ascent
+	pm.dim().asc += pm.rows().front().ascent();
+	pm.dim().des -= pm.rows().front().ascent();
 
 	changed |= old_dim.height() != pm.dim().height();
 
@@ -1183,6 +1185,9 @@ void TextMetrics::setRowHeight(Row & row) const
 
 	row.dim().asc = maxasc;
 	row.dim().des = maxdes;
+
+	// This is useful for selections
+	row.contents_dim() = row.dim();
 }
 
 
@@ -1349,7 +1354,7 @@ Row const & TextMetrics::getPitAndRowNearY(int & y, pit_type & pit,
 {
 	ParagraphMetrics const & pm = par_metrics_[pit];
 
-	int yy = pm.position() - pm.rows().front().ascent();
+	int yy = pm.position() - pm.ascent();
 	LBUFERR(!pm.rows().empty());
 	RowList::const_iterator rit = pm.rows().begin();
 	RowList::const_iterator rlast = pm.rows().end();
@@ -1616,8 +1621,9 @@ void TextMetrics::deleteLineForward(Cursor & cur)
 
 int TextMetrics::leftMargin(pit_type pit) const
 {
-	// the + 1 is useful when the paragraph is empty
-	return leftMargin(pit, text_->paragraphs()[pit].size() + 1);
+	// FIXME: what is the semantics? It depends on whether the
+	// paragraph is empty!
+	return leftMargin(pit, text_->paragraphs()[pit].size());
 }
 
 
@@ -1630,7 +1636,7 @@ int TextMetrics::leftMargin(pit_type const pit, pos_type const pos) const
 	Paragraph const & par = pars[pit];
 	LASSERT(pos >= 0, return 0);
 	// We do not really care whether pos > par.size(), since we do not
-	// access the data. It can be actially useful, when querying the
+	// access the data. It can be actually useful, when querying the
 	// margin without indentation (see leftMargin(pit_type).
 
 	Buffer const & buffer = bv_->buffer();

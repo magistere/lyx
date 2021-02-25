@@ -13,9 +13,11 @@
 
 #include "BranchList.h"
 #include "Color.h"
+#include "ColorSet.h"
 
 #include "frontends/Application.h"
 
+#include "support/convert.h"
 #include "support/lstrings.h"
 
 #include <algorithm>
@@ -24,17 +26,6 @@ using namespace std;
 
 
 namespace lyx {
-
-Branch::Branch()
-	: selected_(false), filenameSuffix_(false)
-{
-	// no theApp() with command line export
-	if (theApp())
-		theApp()->getRgbColor(Color_background, color_);
-	else
-		frontend::Application::getRgbColorUncached(Color_background, color_);
-}
-
 
 docstring const & Branch::branch() const
 {
@@ -75,30 +66,60 @@ void Branch::setFileNameSuffix(bool b)
 }
 
 
-RGBColor const & Branch::color() const
+string const & Branch::color() const
 {
-	return color_;
+	return (theApp() && theApp()->isInDarkMode())
+			? dmcolor_ : lmcolor_;
 }
 
 
-void Branch::setColor(RGBColor const & c)
+string const & Branch::lightModeColor() const
 {
-	color_ = c;
+	return lmcolor_;
 }
 
 
-void Branch::setColor(string const & str)
+string const & Branch::darkModeColor() const
 {
-	if (str.size() == 7 && str[0] == '#')
-		color_ = rgbFromHexName(str);
-	else {
-		// no color set or invalid color - use normal background
-		// no theApp() with command line export
-		if (theApp())
-			theApp()->getRgbColor(Color_background, color_);
-		else
-			frontend::Application::getRgbColorUncached(Color_background, color_);
-	}
+	return dmcolor_;
+}
+
+
+void Branch::setColor(string const & col)
+{
+	if (theApp() && theApp()->isInDarkMode())
+		setColors(string(), col);
+	else
+		setColors(col);
+}
+
+
+void Branch::setColors(string const & lmcol, string const & dmcol)
+{
+	if (lmcol.empty() && lmcolor_ == "background" && support::prefixIs(dmcol, "#"))
+		lmcolor_ = X11hexname(inverseRGBColor(rgbFromHexName(dmcol)));
+	else if (!lmcol.empty())
+		lmcolor_ = lmcol;
+	if (dmcol.empty() && dmcolor_ == "background" && support::prefixIs(lmcol, "#"))
+		dmcolor_ = X11hexname(inverseRGBColor(rgbFromHexName(lmcol)));
+	else if (!dmcol.empty())
+		dmcolor_ = dmcol;
+
+	// Update the Color table
+	string lmcolor = lmcolor_;
+	string dmcolor = dmcolor_;
+	if (lmcolor == "none")
+		lmcolor = lcolor.getX11HexName(Color_background);
+	else if (lmcolor.size() != 7 || lmcolor[0] != '#')
+		lmcolor = lcolor.getX11HexName(lcolor.getFromLyXName(lmcolor));
+	if (dmcolor == "none")
+		dmcolor = lcolor.getX11HexName(Color_background, true);
+	else if (dmcolor.size() != 7 || dmcolor[0] != '#')
+		dmcolor = lcolor.getX11HexName(lcolor.getFromLyXName(dmcolor), true);
+
+	// FIXME UNICODE
+	lcolor.setColor("branch" + convert<string>(branch_list_id_)
+			+ to_utf8(branch_), lmcolor, dmcolor);
 }
 
 
@@ -147,6 +168,7 @@ bool BranchList::add(docstring const & s)
 			br.setBranch(name);
 			br.setSelected(false);
 			br.setFileNameSuffix(false);
+			br.setListID(id_);
 			list_.push_back(br);
 		}
 		if (j == docstring::npos)
@@ -173,7 +195,7 @@ bool BranchList::rename(docstring const & oldname,
 	if (find(newname)) {
 		// new name already taken
 		if (merge)
-		      return remove(oldname);
+			return remove(oldname);
 		return false;
 	}
 

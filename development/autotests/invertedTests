@@ -393,7 +393,7 @@ Sublabel: varioref
 # varioref is not working with XeTeX/LuaTeX for Russian, as it uses some
 # char macros which are not defined for these engines.
 export/doc/ru/UserGuide_(dvi3|pdf[45])_(system|tex)F
-export/doc/ru/(Math|Additional|Shortcuts)_(dvi3|pdf[45])_systemF
+export/doc/ru/(Math|Additional|Shortcuts|EmbeddedObjects)_(dvi3|pdf[45])_systemF
 
 
 # ================================================
@@ -426,7 +426,6 @@ export/examples/(de|es|fr|ja|ru)/Graphics_and_Insets/XY-(Pic|Figure)_docbook5
 export/mathmacros/testcases_speed_docbook5
 export/mathmacros/testcases_environments_docbook5
 export/mathmacros/masterOfSpace_docbook5
-export/doc/sl/Tutorial_docbook5
 # - Sidebars can be nested in LyX (mostly with shapepar), but not in DocBook. Also, multicol issues (like columns in
 #   columns).
 export/doc(|/de|/es|/fr|/ja|/ru)/Additional_docbook5
@@ -441,6 +440,8 @@ export/templates/Books/Springer.*/.*_docbook5
 !export/export/docbook/svglo_docbook5
 export/export/docbook/sv.*_docbook5
 #   - scrbook with too many customisations.
+!export/templates/Theses/PhD_Thesis/Acknowledgments_docbook5
+!export/templates/Theses/PhD_Thesis/Summary_docbook5
 export/templates/Theses/PhD_Thesis/.*_docbook5
 #   - Hollywood, too much formatting in elements DocBook does not allow to be formatted (like address).
 export/(templates|examples)/Scripts/Hollywood_docbook5
@@ -471,15 +472,13 @@ export/templates/Articles/Elsevier_docbook5
 export/export/latex/languages/supported-languages_(|babel|babel_auto-legacy)_?docbook5
 # - EmbeddedObjects: this document is too complex, with captions within tables, many LaTeX parameters when including
 #   a file, uncaptioned tables in the same float, etc.
-export/doc(|/de|/es|/fr|/ja)/EmbeddedObjects_docbook5
+export/doc(|/de|/es|/fr|/ja|/ru)/EmbeddedObjects_docbook5
 # - Math: formula in inline tag, formula with two references (only one xml:id allowed per <equation> tag).
 export/doc(|/de|/es|/fr|/ja|/ru)/Math_docbook5
 # - UserGuide: formula in inline tag, use of fancyhdr
 export/doc(|/de|/es|/fr|/ja|/ru)/UserGuide_docbook5
 # - Double inlines (code within code, personname within personname, emphasis within date, etc.).
 export/doc/(es|fr|ja)/Customization_docbook5
-export/doc/gl/Tutorial_docbook5
-export/examples/Articles/Chess/Game_2_docbook5
 # - Bicaption module would require some C++ implementation.
 export/examples(|/de|/fr|/ja)/Modules/Multilingual_Captions_docbook5
 # - European CV: hard to mix items and bibliographies.

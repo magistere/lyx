@@ -68,11 +68,13 @@ public:
 	///
 	void toggleFixedWidth(bool fw) { isFixedWidth = fw; }
 	///
+	void toggleVarWidth(bool vw) { isVarwidth = vw; }
+	///
 	void toggleMultiCol(bool m) { isMultiColumn = m; }
 	///
 	void toggleMultiRow(bool m) { isMultiRow = m; }
 	///
-	void setContentAlignment(LyXAlignment al) {contentAlign = al; }
+	void setContentAlignment(LyXAlignment al) { contentAlign = al; }
 	/// writes the contents of the cell as a string, optionally
 	/// descending into insets
 	docstring asString(bool intoInsets = true);
@@ -89,6 +91,10 @@ public:
 	bool inheritFont() const override { return false; }
 	/// Can the cell contain several paragraphs?
 	bool allowMultiPar() const override { return !isMultiRow && (!isMultiColumn || isFixedWidth); }
+	///
+	bool canPaintChange(BufferView const &) const override { return false; }
+	/// This assures we never output \maketitle in table cells
+	bool isInTitle() const override { return true; }
 private:
 	///
 	InsetTableCell() = delete;
@@ -121,6 +127,8 @@ private:
 	///
 	bool isFixedWidth;
 	///
+	bool isVarwidth;
+	///
 	bool isMultiColumn;
 	///
 	bool isMultiRow;
@@ -133,8 +141,6 @@ private:
 	LyXAlignment contentAlignment() const override { return contentAlign; }
 	///
 	bool usePlainLayout() const override { return true; }
-	///
-	bool forcePlainLayout(idx_type = 0) const override;
 	///
 	bool allowParagraphCustomization(idx_type = 0) const override;
 	///
@@ -546,9 +552,11 @@ public:
 	///
 	void insertRow(row_type row, bool copy);
 	///
-	void moveColumn(col_type col, ColDirection direction);
+	void moveColumn(col_type col_start, col_type col_end,
+			ColDirection direction);
 	///
-	void moveRow(row_type row, RowDirection direction);
+	void moveRow(row_type row_start, row_type row_end,
+		     RowDirection direction);
 	///
 	void appendColumn(col_type column);
 	///
@@ -1031,8 +1039,6 @@ public:
 	// "normal" means without width set!
 	/// should all paragraphs be output with "Standard" layout?
 	bool allowParagraphCustomization(idx_type cell = 0) const override;
-	///
-	bool forcePlainLayout(idx_type cell = 0) const override;
 	///
 	void addPreview(DocIterator const & inset_pos,
 		graphics::PreviewLoader &) const override;

@@ -43,7 +43,7 @@ namespace lyx {
 class Branch {
 public:
 	///
-	Branch();
+	Branch() {}
 	///
 	docstring const & branch() const;
 	///
@@ -61,26 +61,40 @@ public:
 	/// Select/deselect filename suffix property.
 	void setFileNameSuffix(bool);
 	///
-	RGBColor const & color() const;
+	void setListID(int const id) { branch_list_id_ = id; }
 	///
-	void setColor(RGBColor const &);
+	std::string const & color() const;
+	///
+	std::string const & lightModeColor() const;
+	///
+	std::string const & darkModeColor() const;
 	/**
-	 * Set color from a string "#rrggbb".
+	 * Set background color from a hexcolor string "#rrggbb" or a lyx color name.
 	 * Use Color:background if the string is no valid color.
 	 * This ensures compatibility with LyX 1.4.0 that had the symbolic
 	 * color "none" that was displayed as Color:background.
+	 * This sets the dark color if in dark mode, else the light color.
 	 */
-	void setColor(std::string const &);
+	void setColor(std::string const & color);
+	/// Set dark and light background colors
+	void setColors(std::string const & color,
+		      std::string const & dmcolor = std::string());
+	///
+	int listID() const { return branch_list_id_; }
 
 private:
 	///
 	docstring branch_;
 	///
-	bool selected_;
+	bool selected_ = false;
 	///
-	bool filenameSuffix_;
+	bool filenameSuffix_ = false;
+	/// light mode background color
+	std::string lmcolor_ = "background";
+	/// dark mode background color
+	std::string dmcolor_ = "background";
 	///
-	RGBColor color_;
+	int branch_list_id_ = 0;
 };
 
 
@@ -91,10 +105,13 @@ public:
 	typedef List::const_iterator const_iterator;
 
 	///
-	BranchList() : separator_(from_ascii("|")) {}
+	BranchList() : separator_(from_ascii("|")), id_(rand()) {}
 
 	///
 	docstring separator() const { return separator_; }
+
+	///
+	int id() const { return id_; }
 
 	///
 	bool empty() const { return list_.empty(); }
@@ -131,6 +148,8 @@ private:
 	List list_;
 	///
 	docstring separator_;
+	///
+	int id_;
 };
 
 } // namespace lyx

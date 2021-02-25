@@ -8,7 +8,7 @@
 # a document, like title, author and such.
 
 
-Format 90
+Format 93
 
 Style Title
 	Margin                Static
@@ -55,6 +55,7 @@ Style Author
 	DocBookWrapperTag     author
 	DocBookWrapperTagType block
 	DocBookInInfo         always
+	DocBookNoFontInside   true
 End
 
 
@@ -77,4 +78,5 @@ Style Date
 	DocBookTag            date
 	DocBookTagType        paragraph
 	DocBookInInfo         always
+    DocBookNoFontInside   true
 End

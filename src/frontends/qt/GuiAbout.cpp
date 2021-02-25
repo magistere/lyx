@@ -281,6 +281,11 @@ static QString version(bool const plain = false)
 	else
 		out << "</p><p>";
 	out << toqstr(bformat(_("Qt Version (compile-time): %1$s"), from_ascii(QT_VERSION_STR)));
+	if (plain)
+		out << '\n';
+	else
+		out << "</p><p>";
+	out << toqstr(bformat(_("Python detected: %1$s"), from_utf8(os::python())));
 	if (!plain)
 		out << toqstr("</p></body></html>");
 	return res;
@@ -330,7 +335,9 @@ GuiAbout::GuiAbout(GuiView & lv)
 					    Qt::SmoothTransformation));
 	d->ui.iconLA->setFixedWidth(iconsize);
 	d->ui.dirLibraryLA->setText(dirLibrary());
+	d->ui.dirLibraryLA->adjustSize();
 	d->ui.dirUserLA->setText(dirUser());
+	d->ui.dirUserLA->adjustSize();
 	d->ui.buildinfoTB->setText(buildinfo());
 	d->ui.releasenotesTB->setHtml(release_notes());
 	d->ui.releasenotesTB->setOpenExternalLinks(true);
@@ -339,7 +346,7 @@ GuiAbout::GuiAbout(GuiView & lv)
 	d->ui.tab->setUsesScrollButtons(false);
 
 	// fix height to minimum
-	setFixedHeight(sizeHint().height());
+	// setFixedHeight(sizeHint().height());
 }
 
 

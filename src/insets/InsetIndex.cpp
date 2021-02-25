@@ -34,6 +34,7 @@
 
 #include "support/debug.h"
 #include "support/docstream.h"
+#include "support/FileName.h"
 #include "support/gettext.h"
 #include "support/lstrings.h"
 
@@ -82,7 +83,7 @@ void InsetIndex::latex(otexstream & ios, OutputParams const & runparams_in) cons
 	odocstringstream ourlatex;
 	otexstream ots(ourlatex);
 	InsetText::latex(ots, runparams);
-	if (runparams.for_search) {
+	if (runparams.for_searchAdv != OutputParams::NoSearch) {
 		// No need for special handling, if we are only searching for some patterns
 		os << ourlatex.str() << "}";
 		return;
@@ -456,7 +457,8 @@ ColorCode InsetIndex::labelColor() const
 	if (params_.index.empty() || params_.index == from_ascii("idx"))
 		return InsetCollapsible::labelColor();
 	// FIXME UNICODE
-	ColorCode c = lcolor.getFromLyXName(to_utf8(params_.index));
+	ColorCode c = lcolor.getFromLyXName(to_utf8(params_.index)
+					    + "@" + buffer().fileName().absFileName());
 	if (c == Color_none)
 		c = InsetCollapsible::labelColor();
 	return c;

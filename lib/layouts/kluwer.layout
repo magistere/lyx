@@ -15,7 +15,7 @@
 # 2003-03-03  Updated for lyx 1.3.0.
 
 
-Format 90
+Format 93
 Columns                 1
 Sides                   2
 SecNumDepth             4
@@ -172,6 +172,7 @@ Style Date
 	DocBookTag            date
 	DocBookTagType        paragraph
 	DocBookInInfo         always
+    DocBookNoFontInside   true
 End
 
 

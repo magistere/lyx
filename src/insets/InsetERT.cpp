@@ -31,6 +31,8 @@
 
 #include <sstream>
 
+#include <iostream>
+
 using namespace std;
 using namespace lyx::support;
 
@@ -98,7 +100,13 @@ void InsetERT::docbook(XMLStream & xs, OutputParams const & runparams) const
 	// in an ERT, use simple line breaks.
 	// New line after each paragraph of the ERT, save the last one.
 	while (true) { // For each paragraph in the ERT...
-		auto pars = par->simpleDocBookOnePar(buffer(), runparams, text().outerFont(distance(begin, par)), 0, false, true);
+        std::vector<docstring> pars_prepend;
+        std::vector<docstring> pars;
+        std::vector<docstring> pars_append;
+        tie(pars_prepend, pars, pars_append) = par->simpleDocBookOnePar(buffer(), runparams, text().outerFont(distance(begin, par)), 0, false, true);
+
+        for (docstring const & parXML : pars_prepend)
+            xs << XMLStream::ESCAPE_NONE << parXML;
 		auto p = pars.begin();
 		while (true) { // For each line of this ERT paragraph...
 			os << *p;
@@ -108,6 +116,8 @@ void InsetERT::docbook(XMLStream & xs, OutputParams const & runparams) const
 			else
 				break;
 		}
+        for (docstring const & parXML : pars_append)
+            xs << XMLStream::ESCAPE_NONE << parXML;
 
 		++par;
 		if (par != end)
@@ -121,10 +131,14 @@ void InsetERT::docbook(XMLStream & xs, OutputParams const & runparams) const
 //		auto lay = getLayout();
 //	}
 
-	// Output the ERT as a comment with the appropriate escaping.
-	xs << XMLStream::ESCAPE_NONE << "<!-- ";
-	xs << XMLStream::ESCAPE_COMMENTS << os.str();
-	xs << XMLStream::ESCAPE_NONE << " -->";
+	// Output the ERT as a comment with the appropriate escaping if the command is not recognised.
+	if (trim(os.str()) == from_ascii("\\textquotesingle")) {
+	    xs << "'";
+	} else {
+        xs << XMLStream::ESCAPE_NONE << "<!-- ";
+        xs << XMLStream::ESCAPE_COMMENTS << os.str();
+        xs << XMLStream::ESCAPE_NONE << " -->";
+    }
 }
 
 

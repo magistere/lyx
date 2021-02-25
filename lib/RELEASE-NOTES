@@ -18,6 +18,18 @@
 
 * Ctrl-click on a cross-reference will now take you to its label.
 
+* Default shortcuts for saving bookmarks have been changed to Alt-NUM, where
+  NUM is the number of the bookmark. (They were previously Shift-F1, etc.) 
+
+* This allows Shift-F3 to be used for word-find-backwards (i.e., find previous)
+  on Linux and Windows.
+
+* The shortcut for word-find on OSX is now Cmd-E, as is the Apple standard. The
+  shortcut for word-find-previous is Cmd-G.
+
+* Continuous spellcheck is now on by default, but only if the user does not have
+  an existing preferences file. In that case, the old setting is preserved.
+
 
 !!Documents compilation process and images conversion
 
@@ -90,10 +102,16 @@
 
 * ifrelatives is a helper function to check whether a buffer has a master or children.
 
+* lyxfiles-open opens the new examples or templates dialog.
+
 * master-buffer-forall executes an lfun in the master and all children of a document.
 
 * paragraph-select is a new convenience function to select the paragraph
   surrounding the actual cursor position.
+
+* search-string-set [arg] stores the <arg>, the currently selected text or the word under
+  cursor in the search cache that is used by word-find[-backward|-forward] if no argument
+  is given to those.
 
 * inset-split is a new convenience function that splits an inset into two at the given
   cursor position. This is only implemented for text insets currently.
@@ -157,6 +175,22 @@
 * The dependency on pplatex/dvipost was dropped.
 
 * The dependency on sgmltools was dropped, see DocBook 5 section.
+
+!!! Dependencies to generate ePub files:
+
+* The DocBook XSLT 1.0 style sheets are a required dependency to generate
+  ePub files. All versions since 1.76.0 are supported. Version 1.79.2 is
+  bundled with LyX.
+
+* XSLT processor is needed, two options were successfully tested
+  a) xsltproc
+     - Works on Linux and OSX (tested with xsltproc 1.1.32).
+     - Fails on Windows.
+  b) Saxon
+     - Tested on Linux, OSX and Windows.
+     - Java is a required dependency. Any JVM for Java 1.4 should be supported.
+     - Only Saxon versions 6.5.4 and 6.5.5 are supported.
+     - Version 6.5.5 is bundled with LyX.
 
 
 !!Known issues in version 2.4.0

@@ -335,12 +335,16 @@ FileName const fileSearch(string const & path, string const & name,
 //   2) build_lyxdir (if not empty)
 //   3) system_lyxdir
 FileName const libFileSearch(string const & dir, string const & name,
-			   string const & ext, search_mode mode)
+			   string const & ext, search_mode mode,
+			   bool const only_global)
 {
-	FileName fullname = fileSearch(addPath(package().user_support().absFileName(), dir),
-				     name, ext, mode);
-	if (!fullname.empty())
-		return fullname;
+	FileName fullname;
+	if (!only_global) {
+		fullname = fileSearch(addPath(package().user_support().absFileName(), dir),
+					     name, ext, mode);
+		if (!fullname.empty())
+			return fullname;
+	}
 
 	if (!package().build_support().empty())
 		fullname = fileSearch(addPath(package().build_support().absFileName(), dir),
@@ -714,15 +718,15 @@ string const replaceEnvironmentPath(string const & path)
 			}
 			string env_var = getEnv(what.str(2));
 			if (env_var.empty()) {
-				// temporarily use escape (0x1B) in place of $
+				// temporarily use alert/bell (0x07) in place of $
 				if (brackets)
-					env_var = "\e{" + what.str(2) + '}';
+					env_var = "\a{" + what.str(2) + '}';
 				else
-					env_var = "\e" + what.str(2);
+					env_var = "\a" + what.str(2);
 			}
 			result = what.str(1) + env_var + what.str(3);
 		}
-		return subst(result, '\e', '$');
+		return subst(result, '\a', '$');
 	} catch (exception const & e) {
 		LYXERR0("Something is very wrong: " << e.what());
 		return path;

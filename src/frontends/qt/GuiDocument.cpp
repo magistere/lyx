@@ -162,7 +162,9 @@ bool is_backgroundcolor;
 lyx::RGBColor set_fontcolor;
 bool is_fontcolor;
 lyx::RGBColor set_notefontcolor;
+bool is_notefontcolor;
 lyx::RGBColor set_boxbgcolor;
+bool is_boxbgcolor;
 bool forced_fontspec_activation;
 
 } // anonymous namespace
@@ -1654,10 +1656,7 @@ GuiDocument::GuiDocument(GuiView & lv)
 		this, SLOT(modulesChanged()));
 	// The filter bar
 	filter_ = new FancyLineEdit(this);
-	filter_->setButtonPixmap(FancyLineEdit::Right, getPixmap("images/", "editclear", "svgz,png"));
-	filter_->setButtonVisible(FancyLineEdit::Right, true);
-	filter_->setButtonToolTip(FancyLineEdit::Right, qt_("Clear text"));
-	filter_->setAutoHideButton(FancyLineEdit::Right, true);
+	filter_->setClearButton(true);
 	filter_->setPlaceholderText(qt_("All avail. modules"));
 	modulesModule->moduleFilterBarL->addWidget(filter_, 0);
 	modulesModule->findModulesLA->setBuddy(filter_);
@@ -1894,6 +1893,7 @@ void GuiDocument::filterModules(QString const & str)
 			item->setData(m.name, Qt::DisplayRole);
 			item->setData(toqstr(m.id), Qt::UserRole);
 			item->setData(m.description, Qt::ToolTipRole);
+			item->setEditable(false);
 			if (m.local)
 				item->setIcon(user_icon);
 			else
@@ -1985,17 +1985,17 @@ void GuiDocument::setListingsMessage()
 
 void GuiDocument::listingsPackageChanged(int index)
 {
-        string const package = lst_packages[index];
-        if (package == "Minted" && lyxrc.pygmentize_command.empty()) {
-                Alert::warning(_("Pygments driver command not found!"),
-                    _("The driver command necessary to use the minted package\n"
-                      "(pygmentize) has not been found. Make sure you have\n"
-                      "the python-pygments module installed or, if the driver\n"
-                      "is named differently, to add the following line to the\n"
-                      "document preamble:\n\n"
-                      "\\AtBeginDocument{\\renewcommand{\\MintedPygmentize}{driver}}\n\n"
-                      "where 'driver' is name of the driver command."));
-        }
+	string const package = lst_packages[index];
+	if (package == "Minted" && lyxrc.pygmentize_command.empty()) {
+		Alert::warning(_("Pygments driver command not found!"),
+		    _("The driver command necessary to use the minted package\n"
+		      "(pygmentize) has not been found. Make sure you have\n"
+		      "the python-pygments module installed or, if the driver\n"
+		      "is named differently, to add the following line to the\n"
+		      "document preamble:\n\n"
+		      "\\AtBeginDocument{\\renewcommand{\\MintedPygmentize}{driver}}\n\n"
+		      "where 'driver' is name of the driver command."));
+	}
 }
 
 
@@ -2264,6 +2264,7 @@ void GuiDocument::changeNoteFontColor()
 		colorButtonStyleSheet(newColor));
 	// save color
 	set_notefontcolor = rgbFromHexName(fromqstr(newColor.name()));
+	is_notefontcolor = true;
 	change_adaptor();
 }
 
@@ -2274,6 +2275,7 @@ void GuiDocument::deleteNoteFontColor()
 	theApp()->getRgbColor(Color_greyedouttext, set_notefontcolor);
 	colorModule->noteFontColorPB->setStyleSheet(
 		colorButtonStyleSheet(rgb2qcolor(set_notefontcolor)));
+	is_notefontcolor = false;
 	change_adaptor();
 }
 
@@ -2289,6 +2291,7 @@ void GuiDocument::changeBoxBackgroundColor()
 		colorButtonStyleSheet(newColor));
 	// save color
 	set_boxbgcolor = rgbFromHexName(fromqstr(newColor.name()));
+	is_boxbgcolor = true;
 	change_adaptor();
 }
 
@@ -2299,6 +2302,7 @@ void GuiDocument::deleteBoxBackgroundColor()
 	theApp()->getRgbColor(Color_shadedbg, set_boxbgcolor);
 	colorModule->boxBackgroundPB->setStyleSheet(
 		colorButtonStyleSheet(rgb2qcolor(set_boxbgcolor)));
+	is_boxbgcolor = false;
 	change_adaptor();
 }
 
@@ -3516,7 +3520,14 @@ void GuiDocument::applyView()
 	bp_.fontcolor = set_fontcolor;
 	bp_.isfontcolor = is_fontcolor;
 	bp_.notefontcolor = set_notefontcolor;
+	bp_.isnotefontcolor = is_notefontcolor;
+	if (is_notefontcolor) {
+		// Set information used in statusbar (#12130)
+		lcolor.setColor("notefontcolor", lyx::X11hexname(set_notefontcolor));
+		lcolor.setGUIName("notefontcolor", N_("greyedout inset text"));
+	}
 	bp_.boxbgcolor = set_boxbgcolor;
+	bp_.isboxbgcolor = is_boxbgcolor;
 
 	// numbering
 	if (bp_.documentClass().hasTocLevels()) {
@@ -4034,6 +4045,7 @@ void GuiDocument::paramsToDialog()
 	colorModule->noteFontColorPB->setStyleSheet(
 		colorButtonStyleSheet(rgb2qcolor(bp_.notefontcolor)));
 	set_notefontcolor = bp_.notefontcolor;
+	is_notefontcolor = bp_.isnotefontcolor;
 
 	if (bp_.isbackgroundcolor) {
 		colorModule->backgroundPB->setStyleSheet(
@@ -4045,6 +4057,7 @@ void GuiDocument::paramsToDialog()
 	colorModule->boxBackgroundPB->setStyleSheet(
 		colorButtonStyleSheet(rgb2qcolor(bp_.boxbgcolor)));
 	set_boxbgcolor = bp_.boxbgcolor;
+	is_boxbgcolor = bp_.isboxbgcolor;
 
 	// numbering
 	int const min_toclevel = documentClass().min_toclevel();
@@ -4518,6 +4531,10 @@ void GuiDocument::paramsToDialog()
 
 	// clear changed branches cache
 	changedBranches_.clear();
+
+	// re-initiate module filter
+	if (!filter_->text().isEmpty())
+		moduleFilterPressed();
 
 	// reset trackers
 	nonModuleChanged_ = false;
@@ -5008,7 +5025,13 @@ void GuiDocument::dispatchParams()
 		for (; it != end; ++it) {
 			docstring const & current_branch = it->branch();
 			Branch const * branch = branchlist.find(current_branch);
-			string const x11hexname = X11hexname(branch->color());
+			string const bcolor = branch->color();
+			RGBColor rgbcol;
+			if (bcolor.size() == 7 && bcolor[0] == '#')
+				rgbcol = lyx::rgbFromHexName(bcolor);
+			else
+				guiApp->getRgbColor(lcolor.getFromLyXName(bcolor), rgbcol);
+			string const x11hexname = X11hexname(rgbcol);
 			// display the new color
 			docstring const str = current_branch + ' ' + from_ascii(x11hexname);
 			dispatch(FuncRequest(LFUN_SET_COLOR, str));

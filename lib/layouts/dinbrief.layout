@@ -16,7 +16,7 @@
 
 # TODO: DocBook doesn't support several letters in the same file.
 
-Format 90
+Format 93
 
 Input letter.layout
 
@@ -223,6 +223,7 @@ Style Date
 	DocBookAttr    ""
 	DocBookTagType paragraph
 	DocBookInInfo  always
+    DocBookNoFontInside   true
 End
 
 # dinbrief does not emphasize the subject line

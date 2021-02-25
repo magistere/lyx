@@ -847,7 +847,9 @@ void MenuDefinition::expandSpellingSuggestions(BufferView const * bv)
 								true,     // match word
 								false,    // all words
 								true,     // forward
-								false))); // find next
+								false,    // find next
+								false,    // auto-wrap
+								false))); // only selection
 					if (i < m)
 						add(w);
 					else
@@ -987,7 +989,7 @@ void MenuDefinition::expandDocuments()
 	MenuItem item(MenuItem::Submenu, qt_("Hidden|H"));
 	item.setSubmenu(MenuDefinition(qt_("Hidden|H")));
 
-	Buffer * first = theBufferList().first();
+	Buffer * const first = theBufferList().first();
 	if (!first) {
 		add(MenuItem(MenuItem::Info, qt_("(No Documents Open)")));
 		return;
@@ -1005,7 +1007,7 @@ void MenuDefinition::expandDocuments()
 		if (!b.isClean())
 			label += "*";
 		if (b.notifiesExternalModification())
-			label += QChar(0x26a0);
+			label += QChar(0x26a0); // warning sign ⚠
 		if (i < 10)
 			label = QString::number(i) + ". " + label + '|' + QString::number(i);
 		add(MenuItem(MenuItem::Command, label,

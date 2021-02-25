@@ -7,7 +7,7 @@
 # commands that are useful for article-like document classes, but not
 # for letters.
 
-Format 90
+Format 93
 
 Style Part
 	Category              Sectioning
@@ -33,6 +33,8 @@ Style Part
 		Tooltip       "The part as it appears in the table of contents/running headers"
 		InsertCotext  1
 		IsTocCaption  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 	Font
 	  Series              Bold
@@ -75,6 +77,8 @@ Style Chapter
 		Tooltip       "The chapter as it appears in the table of contents/running headers"
 		InsertCotext  1
 		IsTocCaption  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 	Font
 	  Series              Bold
@@ -114,6 +118,8 @@ Style Section
 		Tooltip       "The section as it appears in the table of contents/running headers"
 		InsertCotext  1
 		IsTocCaption  1
+        DocBookTag    titleabbrev
+        DocBookArgumentAfterMainTag  true
 	EndArgument
 	Font
 	  Series              Bold

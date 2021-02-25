@@ -74,6 +74,7 @@ public:
 	void exit(int status) override;
 	bool event(QEvent * e) override;
 	bool getRgbColor(ColorCode col, RGBColor & rgbcol) override;
+	bool isInDarkMode() override;
 	std::string const hexName(ColorCode col) override;
 	void registerSocketCallback(int fd, SocketCallback func) override;
 	void unregisterSocketCallback(int fd) override;
@@ -227,6 +228,10 @@ private Q_SLOTS:
 	void onLocaleChanged();
 	///
 	void slotProcessFuncRequestQueue() { processFuncRequestQueue(); }
+	///
+#if (QT_VERSION >= 0x050100)
+	void onApplicationStateChanged(Qt::ApplicationState state);
+#endif
 
 private:
 	///
@@ -268,9 +273,9 @@ struct IconInfo {
 	/// Absolute path to icon file
 	QString filepath;
 	/// Swap the icon in RTL mode
-	bool swap;
+	bool swap = false;
 	/// Invert the icon in dark mode
-	bool invert;
+	bool invert = false;
 };
 
 /// \return the pixmap for the given path, name and extension.

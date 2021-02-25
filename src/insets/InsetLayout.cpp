@@ -96,6 +96,7 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		IL_DOCBOOKSECTION,
 		IL_DOCBOOKININFO,
 		IL_DOCBOOKARGUMENTBEFOREMAINTAG,
+		IL_DOCBOOKARGUMENTAFTERMAINTAG,
 		IL_DOCBOOKNOTINPARA,
 		IL_DOCBOOKWRAPPERTAG,
 		IL_DOCBOOKWRAPPERTAGTYPE,
@@ -106,6 +107,7 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		IL_DOCBOOKITEMWRAPPERTAG,
 		IL_DOCBOOKITEMWRAPPERTAGTYPE,
 		IL_DOCBOOKITEMWRAPPERATTR,
+        IL_DOCBOOKNOFONTINSIDE,
 		IL_INTOC,
 		IL_ISTOCCAPTION,
 		IL_LABELFONT,
@@ -150,6 +152,7 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		{ "custompars", IL_CUSTOMPARS },
 		{ "decoration", IL_DECORATION },
 		{ "display", IL_DISPLAY },
+		{ "docbookargumentaftermaintag", IL_DOCBOOKARGUMENTAFTERMAINTAG },
 		{ "docbookargumentbeforemaintag", IL_DOCBOOKARGUMENTBEFOREMAINTAG },
 		{ "docbookattr", IL_DOCBOOKATTR },
 		{ "docbookininfo", IL_DOCBOOKININFO },
@@ -159,6 +162,7 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		{ "docbookitemwrapperattr", IL_DOCBOOKITEMWRAPPERATTR },
 		{ "docbookitemwrappertag", IL_DOCBOOKITEMWRAPPERTAG },
 		{ "docbookitemwrappertagtype", IL_DOCBOOKITEMWRAPPERTAGTYPE },
+		{ "docbooknofontinside", IL_DOCBOOKNOFONTINSIDE },
 		{ "docbooknotinpara", IL_DOCBOOKNOTINPARA },
 		{ "docbooksection", IL_DOCBOOKSECTION },
 		{ "docbooktag", IL_DOCBOOKTAG },
@@ -217,8 +221,10 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 
 	lex.pushTable(elementTags);
 
-	labelfont_ = inherit_font;
-	bgcolor_ = Color_none;
+	if (labelfont_ == sane_font)
+		labelfont_ = inherit_font;
+	if (bgcolor_ == Color_error)
+		bgcolor_ = Color_none;
 	bool getout = false;
 	// whether we've read the CustomPars or ForcePlain tag
 	// for issuing a warning in case MultiPars comes later
@@ -521,6 +527,9 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		case IL_DOCBOOKARGUMENTBEFOREMAINTAG:
 			lex >> docbookargumentbeforemaintag_;
 			break;
+		case IL_DOCBOOKARGUMENTAFTERMAINTAG:
+			lex >> docbookargumentaftermaintag_;
+			break;
 		case IL_DOCBOOKNOTINPARA:
 			lex >> docbooknotinpara_;
 			break;
@@ -554,6 +563,9 @@ bool InsetLayout::read(Lexer & lex, TextClass const & tclass,
 		case IL_DOCBOOKWRAPPERATTR:
 			lex >> docbookwrapperattr_;
 			break;
+        case IL_DOCBOOKNOFONTINSIDE:
+            lex >> docbooknofontinside_;
+            break;
 		case IL_REQUIRES: {
 			lex.eatLine();
 			vector<string> const req
@@ -832,6 +844,9 @@ void InsetLayout::readArgument(Lexer & lex)
 		} else if (tok == "docbookargumentbeforemaintag") {
 			lex.next();
 			arg.docbookargumentbeforemaintag = lex.getBool();
+		} else if (tok == "docbookargumentaftermaintag") {
+			lex.next();
+			arg.docbookargumentaftermaintag = lex.getBool();
 		} else {
 			lex.printError("Unknown tag");
 			error = true;

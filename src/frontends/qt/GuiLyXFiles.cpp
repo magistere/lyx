@@ -186,10 +186,7 @@ GuiLyXFiles::GuiLyXFiles(GuiView & lv)
 
 	// The filter bar
 	filter_ = new FancyLineEdit(this);
-	filter_->setButtonPixmap(FancyLineEdit::Right, getPixmap("images/", "editclear", "svgz,png"));
-	filter_->setButtonVisible(FancyLineEdit::Right, true);
-	filter_->setButtonToolTip(FancyLineEdit::Right, qt_("Clear text"));
-	filter_->setAutoHideButton(FancyLineEdit::Right, true);
+	filter_->setClearButton(true);
 	filter_->setPlaceholderText(qt_("All available files"));
 	filter_->setToolTip(qt_("Enter string to filter the list of available files"));
 #if (QT_VERSION < 0x050000)
@@ -600,7 +597,7 @@ void GuiLyXFiles::dispatchParams()
 	string arg;
 	if (type_ == "templates")
 		arg = "newfile ";
-	arg += fromqstr(file_);
+	arg += quoteName(fromqstr(file_));
 	FuncCode const lfun = getLfun();
 
 	if (lfun == LFUN_NOACTION)

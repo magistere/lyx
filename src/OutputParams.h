@@ -121,7 +121,7 @@ public:
 	*/
 	mutable bool need_maketitle = false;
 
-	/** have_maketitle == true means that \maketitle already hase been output.
+	/** have_maketitle == true means that \maketitle already has been output.
 	*/
 	mutable bool have_maketitle = false;
 
@@ -244,6 +244,11 @@ public:
 	 *  entries in commands with moving arguments (\\section, \\caption etc.)
 	 */
 	mutable docstring post_macro;
+
+	/** Whether we in a command that is not \\long (i.e. cannot have multiple
+	 *  paragraphs)
+	 */
+	mutable bool isNonLong = false;
 
 	/** Whether we are entering a display math inset.
 	 *  Needed to correctly strike out deleted math in change tracking.
@@ -388,6 +393,9 @@ public:
 	/// Some parameters are output before the rest of the paragraph, they should not be generated a second time.
 	std::set<InsetArgument const *> docbook_prepended_arguments = {};
 
+	/// Some parameters are output after the rest of the paragraph, they should not be generated a second time.
+	std::set<InsetArgument const *> docbook_appended_arguments = {};
+
 	/// Are we generating this material for inclusion in a TOC-like entity?
 	bool for_toc = false;
 
@@ -395,7 +403,13 @@ public:
 	bool for_tooltip = false;
 
 	/// Are we generating this material for use by advanced search?
-	bool for_search = false;
+	enum Search {
+		NoSearch,
+		SearchWithDeleted,
+		SearchWithoutDeleted
+	};
+		
+	enum Search for_searchAdv = NoSearch;
 
 	/// Are we generating this material for instant preview?
 	bool for_preview = false;
